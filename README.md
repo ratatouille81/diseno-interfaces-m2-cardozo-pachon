@@ -164,10 +164,6 @@ Pruebas manuales sobre la demo y el entorno local, más consultas directas a la 
 
 Errores encontrados y corregidos durante las pruebas: la fila de días ensanchaba la página a 2.838 px en el celular (ancho mínimo del fieldset y texto oculto con posición absoluta); avisos de error fuera de la vista en el celular; avisos que no se borraban al corregir; colores de Bootstrap distintos a la paleta del módulo 1; la hora partida en dos líneas y con doble punto; respuestas del asistente con símbolos de Markdown; y el servidor local que conservaba en memoria una clave anterior del `.env`.
 
-## Uso de inteligencia artificial
-
-[PENDIENTE: declaración de Omar]
-
 ## Créditos de API y servicios externos
 
 - [Supabase](https://supabase.com): autenticación y base de datos PostgreSQL.
