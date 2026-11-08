@@ -1,30 +1,35 @@
-// Flujo para agendar una cita en cuatro pasos (diseñado en el módulo 1):
+// Flujo para agendar una cita en cuatro pasos (pantallas 03 a 08 del prototipo del módulo 1):
 // 1. Para quién es la cita  2. Especialidad  3. Sede, día y hora  4. Revisar y confirmar
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { diaISO, diaLegible, fechaLarga, hora } from '../lib/formato'
+import { diaLegible, diasHabiles, fechaLarga, hora } from '../lib/formato'
 import { obtenerFestivos } from '../lib/festivos'
-import EncabezadoPaso from '../components/EncabezadoPaso'
+import Encabezado from '../components/Encabezado'
 import TarjetaOpcion from '../components/TarjetaOpcion'
 import Cargando from '../components/Cargando'
 import Alerta from '../components/Alerta'
+import EstadoCita from '../components/EstadoCita'
+import { IconoConfirmada } from '../components/Iconos'
 
 const TITULOS = {
   1: '¿Para quién es la cita?',
-  2: 'Elige la especialidad',
+  2: '¿Qué especialidad necesitas?',
   3: 'Elige sede, día y hora',
   4: 'Revisa y confirma tu cita',
 }
 
-function AgendarCita({ alTerminar, alVerCitas }) {
-  const [paso, setPaso] = useState(1)
+const DIAS = diasHabiles(45)
+
+// "inicial" llega desde "Repetir última cita" con la especialidad y la sede ya elegidas
+function AgendarCita({ inicial, alTerminar, alVerCitas }) {
+  const [paso, setPaso] = useState(inicial ? 3 : 1)
 
   // Datos de la cita que se va armando
   const [paraQuien, setParaQuien] = useState('yo') // 'yo' o 'familiar'
   const [nombre, setNombre] = useState('')
-  const [especialidadId, setEspecialidadId] = useState(null)
-  const [sedeId, setSedeId] = useState(null)
-  const [dia, setDia] = useState(diaISO(1))
+  const [especialidadId, setEspecialidadId] = useState(inicial?.especialidadId ?? null)
+  const [sedeId, setSedeId] = useState(inicial?.sedeId ?? null)
+  const [dia, setDia] = useState(DIAS[0]?.iso ?? '')
   const [espacio, setEspacio] = useState(null) // { agenda_id, fecha_hora }
 
   // Catálogos que vienen de Supabase
@@ -46,6 +51,12 @@ function AgendarCita({ alTerminar, alVerCitas }) {
   const [confirmando, setConfirmando] = useState(false)
   const [citaCreada, setCitaCreada] = useState(null)
 
+  // Al cambiar de paso, el foco va al título para que el lector de pantalla anuncie dónde está el usuario
+  const tituloRef = useRef(null)
+  useEffect(() => {
+    tituloRef.current?.focus()
+  }, [paso, citaCreada])
+
   // Carga especialidades y sedes una sola vez
   useEffect(() => {
     async function cargar() {
@@ -64,10 +75,10 @@ function AgendarCita({ alTerminar, alVerCitas }) {
     cargar()
   }, [])
 
-  // Pide los festivos del año actual y del siguiente (la agenda llega hasta 45 días adelante)
+  // Pide los festivos de los años que cubre la agenda (puede pasar de diciembre a enero)
   useEffect(() => {
     let vigente = true
-    const anios = [...new Set([diaISO(1), diaISO(45)].map((d) => Number(d.slice(0, 4))))]
+    const anios = [...new Set(DIAS.map((d) => Number(d.iso.slice(0, 4))))]
     obtenerFestivos(anios)
       .then((mapa) => {
         if (!vigente) return
@@ -121,6 +132,7 @@ function AgendarCita({ alTerminar, alVerCitas }) {
   function irA(nuevoPaso) {
     setErrorPaso(null)
     setPaso(nuevoPaso)
+    window.scrollTo(0, 0)
   }
 
   function siguiente() {
@@ -131,6 +143,10 @@ function AgendarCita({ alTerminar, alVerCitas }) {
     }
     if (paso === 2 && !especialidadId) {
       setErrorPaso('Elige una especialidad para continuar.')
+      return
+    }
+    if (paso === 3 && !sedeId) {
+      setErrorPaso('Elige una sede para continuar.')
       return
     }
     if (paso === 3 && !espacio) {
@@ -166,53 +182,66 @@ function AgendarCita({ alTerminar, alVerCitas }) {
       }
       return
     }
+    window.scrollTo(0, 0)
     setCitaCreada(data)
   }
 
-  // Pantalla de éxito: confirma con número de cita (visibilidad del estado del sistema)
+  // Pantalla 08 del prototipo: cita confirmada, con número de cita (visibilidad del estado del sistema)
   if (citaCreada) {
     return (
-      <section aria-labelledby="titulo-confirmada" className="row justify-content-center">
-        <div className="col-12 col-md-8 col-lg-6">
-          <Alerta tipo="exito" titulo="¡Tu cita quedó confirmada!">
-            Número de cita: <strong>{citaCreada.id}</strong>
-          </Alerta>
-          <h1 id="titulo-confirmada" className="h4">Detalle de tu cita</h1>
-          <ul className="list-group mb-4">
-            <li className="list-group-item">Paciente: {nombrePaciente}</li>
-            <li className="list-group-item">Especialidad: {especialidad?.nombre}</li>
-            <li className="list-group-item">Sede: {sede?.nombre}, {sede?.direccion}</li>
-            <li className="list-group-item">
-              Fecha: {fechaLarga(espacio.fecha_hora)}, {hora(espacio.fecha_hora)}
-            </li>
-          </ul>
-          <p className="text-secondary">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
-          <div className="d-flex flex-column gap-2">
-            <button type="button" className="btn btn-primary btn-lg w-100" onClick={alVerCitas}>
-              Ver mis citas
-            </button>
-            <button type="button" className="btn btn-outline-primary btn-lg w-100" onClick={alTerminar}>
-              Volver al inicio
-            </button>
+      <main className="contenedor-app contenido contenido--con-acciones text-center" aria-labelledby="titulo-confirmada">
+        <IconoConfirmada className="mt-4 mb-3" />
+        <h1 id="titulo-confirmada" ref={tituloRef} tabIndex={-1} className="titulo-pantalla mb-1">
+          ¡Tu cita quedó confirmada!
+        </h1>
+        <p className="fw-semibold mb-3">Número de cita: {citaCreada.id}</p>
+        <div className="tarjeta text-start mb-3">
+          <p className="mb-2">
+            {especialidad?.nombre}. {nombrePaciente}.
+            <br />
+            {fechaLarga(espacio.fecha_hora)}, {hora(espacio.fecha_hora)}
+            <br />
+            {sede?.nombre}, {sede?.direccion}.
+          </p>
+          <EstadoCita estado="Confirmada" />
+        </div>
+        <p className="small text-secondary">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
+        <div className="acciones-fijas">
+          <div className="contenedor-app d-flex flex-column gap-2">
+            <button type="button" className="btn btn-primary btn-lg w-100" onClick={alVerCitas}>Ver mis citas</button>
+            <button type="button" className="btn btn-outline-primary btn-lg w-100" onClick={alTerminar}>Volver al inicio</button>
           </div>
         </div>
-      </section>
+      </main>
     )
   }
 
-  if (cargandoCatalogos) return <Cargando texto="Preparando el agendamiento…" />
-  if (errorCatalogos) return <Alerta tipo="error">{errorCatalogos}</Alerta>
+  const derechaPaso = <span className="small text-secondary text-nowrap">Paso {paso} de 4</span>
+
+  if (cargandoCatalogos || errorCatalogos) {
+    return (
+      <>
+        <Encabezado titulo="Agendar cita" alVolver={alTerminar} derecha={derechaPaso} />
+        <main className="contenedor-app contenido">
+          {errorCatalogos ? <Alerta tipo="error">{errorCatalogos}</Alerta> : <Cargando texto="Preparando el agendamiento…" />}
+        </main>
+      </>
+    )
+  }
+
+  const diaElegido = DIAS.find((d) => d.iso === dia)
 
   return (
-    <section className="row justify-content-center">
-      <div className="col-12 col-md-8 col-lg-6">
-        <EncabezadoPaso paso={paso} titulo={TITULOS[paso]} alVolver={atras} />
+    <>
+      <Encabezado titulo="Agendar cita" alVolver={atras} derecha={derechaPaso} />
+      <main className="contenedor-app contenido contenido--con-acciones">
+        <h1 ref={tituloRef} tabIndex={-1} className="titulo-pantalla">{TITULOS[paso]}</h1>
 
         {paso === 1 && (
           <fieldset>
-            <legend className="visually-hidden">Para quién es la cita</legend>
+            <legend className="text-secondary fs-6 mb-3">Puedes agendar para ti o para un familiar.</legend>
             <TarjetaOpcion nombre="para-quien" valor="yo" seleccionado={paraQuien === 'yo'}
-              alElegir={conLimpieza(setParaQuien)} titulo="Para mí" descripcion="Soy el titular de la cuenta" />
+              alElegir={conLimpieza(setParaQuien)} titulo="Para mí" descripcion="Titular de la cuenta" />
             <TarjetaOpcion nombre="para-quien" valor="familiar" seleccionado={paraQuien === 'familiar'}
               alElegir={conLimpieza(setParaQuien)} titulo="Para un familiar" descripcion="Hijo, hija, padre, madre u otro beneficiario" />
             {paraQuien === 'familiar' && (
@@ -232,34 +261,58 @@ function AgendarCita({ alTerminar, alVerCitas }) {
               <TarjetaOpcion key={e.id} nombre="especialidad" valor={e.id} seleccionado={especialidadId === e.id}
                 alElegir={conLimpieza(setEspecialidadId)} titulo={e.nombre} descripcion={e.descripcion} />
             ))}
+            {/* Ayuda contextual de la pantalla 04 del prototipo (heurística 10) */}
+            <div className="tarjeta mt-3" style={{ background: 'var(--mc-primario-claro)', borderColor: '#c9dcf2' }}>
+              <p className="fw-semibold mb-1">¿No sabes cuál elegir?</p>
+              <p className="mb-0 small">
+                Si no tienes una orden médica para un especialista, empieza por Medicina general. Si tienes dudas sobre
+                cómo prepararte, pregúntale al Asistente.
+              </p>
+            </div>
           </fieldset>
         )}
 
         {paso === 3 && (
           <>
             <fieldset className="mb-3">
-              <legend className="h6">Sede</legend>
+              <legend className="h6 fw-bold mb-3">Sede</legend>
               {sedes.map((s) => (
                 <TarjetaOpcion key={s.id} nombre="sede" valor={s.id} seleccionado={sedeId === s.id}
-                  alElegir={setSedeId} titulo={s.nombre} descripcion={s.direccion} />
+                  alElegir={conLimpieza(setSedeId)} titulo={s.nombre} descripcion={s.direccion} />
               ))}
             </fieldset>
 
-            <div className="mb-3">
-              <label htmlFor="dia" className="form-label h6">Día</label>
-              <input id="dia" type="date" className="form-control form-control-lg" value={dia}
-                min={diaISO(1)} max={diaISO(45)} onChange={(e) => setDia(e.target.value)} />
-              <div className="form-text">Atención de lunes a viernes, excepto festivos. Puedes agendar hasta con 45 días de anticipación.</div>
-              {estadoFestivos === 'cargando' && (
-                <div className="form-text" role="status">Consultando los festivos de Colombia…</div>
-              )}
+            <fieldset className="mb-3">
+              <legend className="h6 fw-bold mb-1">Día</legend>
+              <p className="small text-secondary mb-2">
+                Lunes a viernes, excepto festivos.
+                {estadoFestivos === 'cargando' && <span role="status"> Consultando los festivos de Colombia…</span>}
+              </p>
               {estadoFestivos === 'error' && (
-                <div className="form-text text-danger">
+                <p className="small text-danger mb-2">
                   No pudimos consultar los festivos. Puedes seguir agendando; si eliges un festivo, la sede no tendrá agenda ese día.
-                </div>
+                </p>
               )}
-            </div>
+              <div className="fila-dias" role="group" aria-label="Días disponibles">
+                {DIAS.map((d) => {
+                  const festivo = festivos.get(d.iso)
+                  return (
+                    <button key={d.iso} type="button" className="pastilla" aria-pressed={dia === d.iso}
+                      disabled={Boolean(festivo)} title={festivo ? `Festivo: ${festivo}` : undefined}
+                      onClick={() => conLimpieza(setDia)(d.iso)}>
+                      {d.rotulo}
+                      {/* Texto extra solo para lectores de pantalla: el nombre conserva lo visible (WCAG 2.5.3) */}
+                      <span className="visually-hidden"> de {d.mes}{festivo ? `, festivo (${festivo}), sin atención` : ''}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
 
+            <h2 className="h6 fw-bold mb-1">Hora disponible</h2>
+            <p className="small text-secondary mb-2">
+              {diaElegido ? `${diaLegible(dia)}. ` : ''}Solo mostramos horas con cupo.
+            </p>
             {!sedeId ? (
               <p className="text-secondary">Elige una sede para ver las horas disponibles.</p>
             ) : festivos.has(dia) ? (
@@ -271,65 +324,65 @@ function AgendarCita({ alTerminar, alVerCitas }) {
             ) : errorHoras ? (
               <Alerta tipo="error">{errorHoras}</Alerta>
             ) : horas.length === 0 ? (
+              // Pantalla 06 del prototipo: explica que no es un error del usuario y qué puede hacer (heurística 9)
               <Alerta tipo="aviso" titulo="No hay horas con cupo ese día">
                 No es un error tuyo: ese día no hay agenda en esta sede. Prueba otro día o elige otra sede.
               </Alerta>
             ) : (
-              <fieldset>
-                <legend className="h6">Hora ({diaLegible(dia)})</legend>
-                <div className="d-flex flex-wrap gap-2">
-                  {horas.map((h) => {
-                    const elegido = espacio?.agenda_id === h.agenda_id
-                    return (
-                      <button key={h.agenda_id} type="button" aria-pressed={elegido}
-                        className={`btn btn-lg boton-hora ${elegido ? 'btn-primary' : 'btn-outline-primary'}`}
-                        onClick={() => conLimpieza(setEspacio)(h)}>
-                        {hora(h.fecha_hora)}
-                      </button>
-                    )
-                  })}
-                </div>
-              </fieldset>
+              <div className="rejilla-horas" role="group" aria-label="Horas disponibles">
+                {horas.map((h) => (
+                  <button key={h.agenda_id} type="button" className="pastilla" aria-pressed={espacio?.agenda_id === h.agenda_id}
+                    onClick={() => conLimpieza(setEspacio)(h)}>
+                    {hora(h.fecha_hora)}
+                  </button>
+                ))}
+              </div>
             )}
           </>
         )}
 
         {paso === 4 && (
           <>
-            <ul className="list-group mb-3">
-              <li className="list-group-item d-flex justify-content-between align-items-start gap-2">
-                <span><span className="d-block small text-secondary">Paciente</span>{nombrePaciente}</span>
-                <button type="button" className="btn btn-link p-0" onClick={() => irA(1)}>Cambiar</button>
-              </li>
-              <li className="list-group-item d-flex justify-content-between align-items-start gap-2">
-                <span><span className="d-block small text-secondary">Especialidad</span>{especialidad?.nombre}</span>
-                <button type="button" className="btn btn-link p-0" onClick={() => irA(2)}>Cambiar</button>
-              </li>
-              <li className="list-group-item d-flex justify-content-between align-items-start gap-2">
-                <span>
-                  <span className="d-block small text-secondary">Sede, día y hora</span>
-                  {sede?.nombre}, {fechaLarga(espacio.fecha_hora)}, {hora(espacio.fecha_hora)}
-                </span>
-                <button type="button" className="btn btn-link p-0" onClick={() => irA(3)}>Cambiar</button>
-              </li>
-            </ul>
-            <p className="small text-secondary">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
+            <div className="tarjeta mb-3">
+              {[
+                ['Paciente', nombrePaciente, 1],
+                ['Especialidad', especialidad?.nombre, 2],
+                ['Sede', `${sede?.nombre}, ${sede?.direccion}`, 3],
+                ['Fecha y hora', `${fechaLarga(espacio.fecha_hora)}, ${hora(espacio.fecha_hora)}`, 3],
+              ].map(([rotulo, valor, pasoDestino], i) => (
+                <div key={rotulo} className={`d-flex justify-content-between align-items-start gap-3 ${i > 0 ? 'pt-3 mt-3 border-top' : ''}`}>
+                  <div>
+                    <p className="small text-secondary mb-0">{rotulo}</p>
+                    <p className="fw-semibold mb-0">{valor}</p>
+                  </div>
+                  <button type="button" className="btn btn-link p-0" onClick={() => irA(pasoDestino)}
+                    aria-label={`Cambiar ${rotulo.toLowerCase()}`}>
+                    Cambiar
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="tarjeta" style={{ background: 'var(--mc-pendiente-fondo)', borderColor: '#f3d48a' }}>
+              <p className="mb-0 small">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
+            </div>
           </>
         )}
 
-        <div className="mt-4">
-          {/* El aviso va junto al botón: es donde está mirando el usuario cuando intenta avanzar */}
-          {errorPaso && <Alerta tipo="error">{errorPaso}</Alerta>}
-          {paso < 4 ? (
-            <button type="button" className="btn btn-primary btn-lg w-100" onClick={siguiente}>Continuar</button>
-          ) : (
-            <button type="button" className="btn btn-primary btn-lg w-100" onClick={confirmar} disabled={confirmando}>
-              {confirmando ? 'Confirmando…' : 'Confirmar cita'}
-            </button>
-          )}
+        <div className="acciones-fijas">
+          <div className="contenedor-app">
+            {/* El aviso va junto al botón: es donde está mirando el usuario cuando intenta avanzar */}
+            {errorPaso && <Alerta tipo="error">{errorPaso}</Alerta>}
+            {paso < 4 ? (
+              <button type="button" className="btn btn-primary btn-lg w-100" onClick={siguiente}>Continuar</button>
+            ) : (
+              <button type="button" className="btn btn-primary btn-lg w-100" onClick={confirmar} disabled={confirmando}>
+                {confirmando ? 'Confirmando…' : 'Confirmar cita'}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      </main>
+    </>
   )
 }
 

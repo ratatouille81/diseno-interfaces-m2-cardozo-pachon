@@ -30,3 +30,20 @@ export function diaLegible(iso) {
   return new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
     .format(new Date(a, m - 1, d))
 }
+
+// Días hábiles (lunes a viernes) desde mañana hasta dentro de n días, para las pastillas de día.
+// Cada día trae su fecha AAAA-MM-DD y su rótulo corto, por ejemplo "Lun 9" y "nov".
+export function diasHabiles(hasta = 45) {
+  const dias = []
+  for (let i = 1; i <= hasta; i++) {
+    const iso = diaISO(i)
+    const [a, m, d] = iso.split('-').map(Number)
+    const fecha = new Date(a, m - 1, d)
+    const diaSemana = fecha.getDay()
+    if (diaSemana === 0 || diaSemana === 6) continue
+    const corto = new Intl.DateTimeFormat('es-CO', { weekday: 'short' }).format(fecha).replace('.', '')
+    const mes = new Intl.DateTimeFormat('es-CO', { month: 'short' }).format(fecha).replace('.', '')
+    dias.push({ iso, rotulo: `${corto.charAt(0).toUpperCase()}${corto.slice(1)} ${d}`, mes })
+  }
+  return dias
+}

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fechaLarga, hora } from '../lib/formato'
 import Cargando from '../components/Cargando'
 import Alerta from '../components/Alerta'
+import Encabezado from '../components/Encabezado'
 import EstadoCita from '../components/EstadoCita'
 import DialogoConfirmacion from '../components/DialogoConfirmacion'
 
@@ -17,16 +18,16 @@ function estadoVisible(cita) {
 function TarjetaCita({ cita, alCancelar }) {
   const estado = estadoVisible(cita)
   return (
-    <li className="card card-body mb-3">
-      <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
-        <h3 className="h6 m-0">{cita.agenda.especialidad.nombre}</h3>
-        <EstadoCita estado={estado} />
-      </div>
-      <p className="mb-1">{fechaLarga(cita.agenda.fecha_hora)}, {hora(cita.agenda.fecha_hora)}</p>
-      <p className="mb-1 text-secondary">{cita.agenda.sede.nombre}, {cita.agenda.sede.direccion}</p>
-      <p className="mb-0 small text-secondary">Paciente: {cita.paciente} · Cita n.º {cita.id}</p>
+    <li className="tarjeta mb-3">
+      {/* Tarjeta de cita de la pantalla 09 del prototipo: especialidad, detalle, estado y acción */}
+      <h3 className="h6 fw-bold mb-2">{cita.agenda.especialidad.nombre}</h3>
+      <p className="mb-2">
+        {cita.paciente}. {fechaLarga(cita.agenda.fecha_hora)}, {hora(cita.agenda.fecha_hora)} {cita.agenda.sede.nombre}.
+      </p>
+      <EstadoCita estado={estado} />
+      <p className="small text-secondary mt-2 mb-0">Cita n.º {cita.id}</p>
       {estado === 'Confirmada' && (
-        <button type="button" className="btn btn-outline-danger mt-3 align-self-start boton-atras" onClick={() => alCancelar(cita)}>
+        <button type="button" className="btn btn-link p-0 mt-2 boton-enlace" onClick={() => alCancelar(cita)}>
           Cancelar cita
         </button>
       )}
@@ -81,15 +82,23 @@ function MisCitas({ alAgendar }) {
     }
   }
 
-  if (cargando) return <Cargando texto="Cargando tus citas…" />
+  if (cargando) {
+    return (
+      <>
+        <Encabezado titulo="Mis citas" />
+        <main className="contenedor-app contenido"><Cargando texto="Cargando tus citas…" /></main>
+      </>
+    )
+  }
 
   const proximas = citas.filter((c) => estadoVisible(c) === 'Confirmada')
   const historial = citas.filter((c) => estadoVisible(c) !== 'Confirmada')
 
   return (
-    <section aria-labelledby="titulo-mis-citas" className="row justify-content-center">
-      <div className="col-12 col-md-8 col-lg-6">
-        <h1 id="titulo-mis-citas" className="h3 mb-3">Mis citas</h1>
+    <>
+      <Encabezado titulo="Mis citas" />
+      <main className="contenedor-app contenido" aria-labelledby="titulo-mis-citas">
+        <h1 id="titulo-mis-citas" className="visually-hidden">Mis citas</h1>
 
         {error && (
           <Alerta tipo="error">
@@ -99,9 +108,9 @@ function MisCitas({ alAgendar }) {
         )}
         {aviso && <Alerta tipo={aviso.tipo}>{aviso.texto}</Alerta>}
 
-        <h2 className="h5 mt-2">Próximas</h2>
+        <h2 className="h6 fw-bold mb-3">Próximas</h2>
         {proximas.length === 0 ? (
-          <div className="card card-body mb-4">
+          <div className="tarjeta mb-4">
             <p className="mb-3">No tienes citas próximas.</p>
             <button type="button" className="btn btn-primary btn-lg" onClick={alAgendar}>Agendar una cita</button>
           </div>
@@ -113,18 +122,19 @@ function MisCitas({ alAgendar }) {
 
         {historial.length > 0 && (
           <>
-            <h2 className="h5">Historial</h2>
-            <ul className="list-unstyled">
+            <h2 className="h6 fw-bold mb-3">Historial</h2>
+            <ul className="list-unstyled mb-0">
               {historial.map((c) => <TarjetaCita key={c.id} cita={c} alCancelar={setPorCancelar} />)}
             </ul>
           </>
         )}
-      </div>
+      </main>
 
       <DialogoConfirmacion
         abierto={Boolean(porCancelar)}
         titulo="¿Cancelar esta cita?"
         textoConfirmar="Sí, cancelar la cita"
+        textoCancelar="No, mantener la cita"
         procesando={cancelando}
         alConfirmar={confirmarCancelacion}
         alCerrar={() => setPorCancelar(null)}
@@ -136,7 +146,7 @@ function MisCitas({ alAgendar }) {
           </p>
         )}
       </DialogoConfirmacion>
-    </section>
+    </>
   )
 }
 
