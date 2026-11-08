@@ -21,6 +21,9 @@ const TITULOS = {
 
 const DIAS = diasHabiles(45)
 
+// Compara sin tildes ni mayúsculas: "pediatria" encuentra "Pediatría"
+const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
 // "inicial" llega desde "Repetir última cita" con la especialidad y la sede ya elegidas
 function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   const [paso, setPaso] = useState(inicial ? 3 : 1)
@@ -28,6 +31,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   // Datos de la cita que se va armando
   const [paraQuien, setParaQuien] = useState('yo') // 'yo', 'otra' o 'f-<id del familiar>'
   const [nombre, setNombre] = useState('')
+  const [busqueda, setBusqueda] = useState('')
   const [especialidadId, setEspecialidadId] = useState(inicial?.especialidadId ?? null)
   const [sedeId, setSedeId] = useState(inicial?.sedeId ?? null)
   const [dia, setDia] = useState(DIAS[0]?.iso ?? '')
@@ -273,10 +277,35 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
         {paso === 2 && (
           <fieldset>
             <legend className="visually-hidden">Especialidad</legend>
-            {especialidades.map((e) => (
-              <TarjetaOpcion key={e.id} nombre="especialidad" valor={e.id} seleccionado={especialidadId === e.id}
-                alElegir={conLimpieza(setEspecialidadId)} titulo={e.nombre} descripcion={e.descripcion} />
-            ))}
+            {/* Buscador de la pantalla 04 del prototipo: atajo para quien ya sabe qué busca (heurística 7) */}
+            <div className="mb-3">
+              <label htmlFor="buscar-especialidad" className="form-label">Buscar especialidad</label>
+              <input id="buscar-especialidad" type="search" className="form-control form-control-lg"
+                placeholder="Por ejemplo: pediatría" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+                aria-describedby="resultado-busqueda" autoComplete="off" />
+            </div>
+            {(() => {
+              const visibles = especialidades.filter((e) =>
+                normalizar(`${e.nombre} ${e.descripcion}`).includes(normalizar(busqueda.trim())))
+              return (
+                <>
+                  <p id="resultado-busqueda" className="small text-secondary mb-2" role="status">
+                    {busqueda.trim()
+                      ? visibles.length === 0
+                        ? `No encontramos "${busqueda.trim()}". Revisa cómo lo escribiste o mira la lista completa.`
+                        : `${visibles.length} ${visibles.length === 1 ? 'especialidad encontrada' : 'especialidades encontradas'}`
+                      : ''}
+                  </p>
+                  {visibles.map((e) => (
+                    <TarjetaOpcion key={e.id} nombre="especialidad" valor={e.id} seleccionado={especialidadId === e.id}
+                      alElegir={conLimpieza(setEspecialidadId)} titulo={e.nombre} descripcion={e.descripcion} />
+                  ))}
+                  {busqueda.trim() && visibles.length === 0 && (
+                    <button type="button" className="btn btn-link p-0 mb-2" onClick={() => setBusqueda('')}>Ver todas las especialidades</button>
+                  )}
+                </>
+              )
+            })()}
             {/* Ayuda contextual de la pantalla 04 del prototipo (heurística 10) */}
             <div className="tarjeta mt-3" style={{ background: 'var(--mc-primario-claro)', borderColor: '#c9dcf2' }}>
               <p className="fw-semibold mb-1">¿No sabes cuál elegir?</p>
