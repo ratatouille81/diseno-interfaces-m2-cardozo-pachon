@@ -12,6 +12,7 @@ import AgendarCita from './pages/AgendarCita'
 import MisCitas from './pages/MisCitas'
 import Asistente from './pages/Asistente'
 import Perfil from './pages/Perfil'
+import NuevaContrasena from './pages/NuevaContrasena'
 
 function App() {
   const [sesion, setSesion] = useState(null)
@@ -19,6 +20,7 @@ function App() {
   const [vista, setVista] = useState('inicio') // 'inicio', 'agendar', 'mis-citas', 'asistente' o 'perfil'
   const [agendaInicial, setAgendaInicial] = useState(null) // datos para "Repetir última cita"
   const [letraGrande, setLetraGrande] = useLetraGrande()
+  const [recuperando, setRecuperando] = useState(false) // llegó desde el enlace de recuperación
 
   useEffect(() => {
     // 1. Al abrir la app, revisa si ya había una sesión guardada
@@ -27,8 +29,10 @@ function App() {
       setRevisando(false)
     })
     // 2. Desde ahí, escucha cada ingreso o salida para actualizar la pantalla
-    const { data: suscripcion } = supabase.auth.onAuthStateChange((_evento, nuevaSesion) => {
+    const { data: suscripcion } = supabase.auth.onAuthStateChange((evento, nuevaSesion) => {
       setSesion(nuevaSesion)
+      // Abrió el enlace de "¿Olvidaste tu contraseña?": hay que pedirle la contraseña nueva
+      if (evento === 'PASSWORD_RECOVERY') setRecuperando(true)
     })
     return () => suscripcion.subscription.unsubscribe()
   }, [])
@@ -51,6 +55,7 @@ function App() {
   if (revisando) {
     return <main className="contenedor-app contenido"><Cargando texto="Revisando tu sesión…" /></main>
   }
+  if (recuperando && sesion) return <NuevaContrasena alTerminar={() => setRecuperando(false)} />
   if (!sesion) return <Ingreso />
 
   const preferenciasLetra = { letraGrande, alCambiarLetra: setLetraGrande }
