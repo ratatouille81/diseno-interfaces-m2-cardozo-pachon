@@ -6,6 +6,15 @@ Mi Cita es un proyecto académico genérico: no corresponde a ninguna EPS real.
 
 > Proyecto en construcción. Este README se completa a medida que avanzan las funcionalidades.
 
+## Cuenta de prueba
+
+Para revisar la demo sin registrarse:
+
+- Correo: `demo@example.com`
+- Contraseña: `MiCitaDemo2026`
+
+Es una cuenta de demostración y no contiene datos reales. También puedes crear tu propia cuenta: el registro no pide confirmar el correo, para que la demo funcione sin configuración adicional.
+
 ## Integrantes
 
 - Omar Eduardo Cardozo Pachón (trabajo individual)
