@@ -1,46 +1,22 @@
-// Componente de navegación: nombre de la app, menú principal y botón para salir.
-// El menú marca la sección actual con aria-current y con un subrayado, no solo con color.
-const SECCIONES = [
-  { id: 'inicio', texto: 'Inicio' },
-  { id: 'mis-citas', texto: 'Mis citas' },
-  { id: 'asistente', texto: 'Asistente' },
-]
+// Encabezado de pantalla del prototipo (componente "Encabezado", 64 px, fondo blanco y borde inferior).
+// A la izquierda: botón Atrás opcional y título. A la derecha: un elemento opcional
+// (por ejemplo "Paso 3 de 4" o el botón "Aa Letra más grande").
+import { IconoAtras } from './Iconos'
 
-function Encabezado({ correo, vista, alNavegar, alCerrarSesion }) {
+function Encabezado({ titulo, alVolver, derecha }) {
   return (
-    <header className="bg-primary text-white">
-      <div className="container d-flex justify-content-between align-items-center gap-3 py-3">
-        <p className="h4 m-0">Mi Cita</p>
-        {correo && (
-          <div className="d-flex align-items-center gap-3">
-            <span className="small d-none d-md-inline">{correo}</span>
-            <button type="button" className="btn btn-light btn-sm" onClick={alCerrarSesion}>
-              Cerrar sesión
+    <header className="encabezado">
+      <div className="contenedor-app d-flex align-items-center justify-content-between gap-2 h-100">
+        <div className="d-flex align-items-center gap-1 min-w-0">
+          {alVolver && (
+            <button type="button" className="boton-icono" onClick={alVolver} aria-label="Atrás">
+              <IconoAtras />
             </button>
-          </div>
-        )}
+          )}
+          <p className="encabezado-titulo m-0 text-truncate">{titulo}</p>
+        </div>
+        {derecha}
       </div>
-      {correo && (
-        <nav aria-label="Principal" className="container">
-          <ul className="nav gap-1">
-            {SECCIONES.map((s) => {
-              const actual = vista === s.id || (s.id === 'inicio' && vista === 'agendar')
-              return (
-                <li key={s.id} className="nav-item">
-                  <button
-                    type="button"
-                    className={`nav-link text-white px-3 py-2 enlace-menu ${actual ? 'enlace-menu--actual' : ''}`}
-                    aria-current={actual ? 'page' : undefined}
-                    onClick={() => alNavegar(s.id)}
-                  >
-                    {s.texto}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-      )}
     </header>
   )
 }

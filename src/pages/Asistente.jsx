@@ -4,6 +4,7 @@
 import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Alerta from '../components/Alerta'
+import Encabezado from '../components/Encabezado'
 
 const MAX_CARACTERES = 500
 const SUGERENCIAS = [
@@ -85,9 +86,10 @@ function Asistente() {
   }
 
   return (
-    <section aria-labelledby="titulo-asistente" className="row justify-content-center">
-      <div className="col-12 col-md-8 col-lg-6">
-        <h1 id="titulo-asistente" className="h3">Asistente para preparar tu cita</h1>
+    <>
+      <Encabezado titulo="Asistente" />
+      <main className="contenedor-app contenido" aria-labelledby="titulo-asistente">
+        <h1 id="titulo-asistente" className="titulo-pantalla">Prepara tu cita</h1>
 
         {/* Transparencia: deja claro que es una IA, qué hace y qué no (diseñar para IA, módulo 1) */}
         <Alerta tipo="info" titulo="Este asistente es una inteligencia artificial">
@@ -100,7 +102,7 @@ function Asistente() {
             <p className="small text-secondary mb-2">Puedes empezar con una de estas preguntas:</p>
             <div className="d-flex flex-column gap-2">
               {SUGERENCIAS.map((s) => (
-                <button key={s} type="button" className="btn btn-outline-primary text-start" onClick={() => preguntar(s)}>
+                <button key={s} type="button" className="btn btn-outline-primary btn-lg text-start fw-normal" onClick={() => preguntar(s)}>
                   {s}
                 </button>
               ))}
@@ -110,7 +112,7 @@ function Asistente() {
 
         <ol className="list-unstyled mb-3" aria-label="Conversación">
           {mensajes.map((m, i) => (
-            <li key={i} className={`card card-body mb-2 ${m.rol === 'user' ? 'mensaje-paciente' : 'mensaje-asistente'}`}>
+            <li key={i} className={`tarjeta mb-2 ${m.rol === 'user' ? 'mensaje-paciente' : ''}`}>
               <span className="small fw-semibold d-block mb-1">{m.rol === 'user' ? 'Tú' : 'Asistente (IA)'}</span>
               <span className="mensaje-texto" aria-live={m.rol === 'model' && i === mensajes.length - 1 ? 'polite' : undefined}>
                 {m.texto || (escribiendo && i === mensajes.length - 1 ? 'Escribiendo…' : '')}
@@ -141,8 +143,8 @@ function Asistente() {
             {escribiendo ? 'El asistente está respondiendo…' : 'Preguntar'}
           </button>
         </form>
-      </div>
-    </section>
+      </main>
+    </>
   )
 }
 
