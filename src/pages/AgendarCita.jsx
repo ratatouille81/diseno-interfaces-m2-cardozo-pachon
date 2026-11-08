@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { diaISO, diaLegible, fechaLarga, hora } from '../lib/formato'
+import { obtenerFestivos } from '../lib/festivos'
 import EncabezadoPaso from '../components/EncabezadoPaso'
 import TarjetaOpcion from '../components/TarjetaOpcion'
 import Cargando from '../components/Cargando'
@@ -37,6 +38,10 @@ function AgendarCita({ alTerminar, alVerCitas }) {
   const [cargandoHoras, setCargandoHoras] = useState(false)
   const [errorHoras, setErrorHoras] = useState(null)
 
+  // Festivos de Colombia desde la API REST Nager.Date: 'cargando', 'listo' o 'error'
+  const [festivos, setFestivos] = useState(new Map())
+  const [estadoFestivos, setEstadoFestivos] = useState('cargando')
+
   const [errorPaso, setErrorPaso] = useState(null)
   const [confirmando, setConfirmando] = useState(false)
   const [citaCreada, setCitaCreada] = useState(null)
@@ -59,6 +64,22 @@ function AgendarCita({ alTerminar, alVerCitas }) {
     cargar()
   }, [])
 
+  // Pide los festivos del año actual y del siguiente (la agenda llega hasta 45 días adelante)
+  useEffect(() => {
+    let vigente = true
+    const anios = [...new Set([diaISO(1), diaISO(45)].map((d) => Number(d.slice(0, 4))))]
+    obtenerFestivos(anios)
+      .then((mapa) => {
+        if (!vigente) return
+        setFestivos(mapa)
+        setEstadoFestivos('listo')
+      })
+      .catch(() => {
+        if (vigente) setEstadoFestivos('error')
+      })
+    return () => { vigente = false }
+  }, [])
+
   // Cada vez que cambian especialidad, sede o día, consulta las horas con cupo
   useEffect(() => {
     if (paso !== 3 || !especialidadId || !sedeId || !dia) return
@@ -67,6 +88,12 @@ function AgendarCita({ alTerminar, alVerCitas }) {
       setCargandoHoras(true)
       setErrorHoras(null)
       setEspacio(null)
+      // Si el día es festivo no se consulta la agenda: ese día no hay atención
+      if (festivos.has(dia)) {
+        setHoras([])
+        setCargandoHoras(false)
+        return
+      }
       const { data, error } = await supabase.rpc('horarios_disponibles', {
         p_especialidad: especialidadId,
         p_sede: sedeId,
@@ -79,7 +106,7 @@ function AgendarCita({ alTerminar, alVerCitas }) {
     }
     cargarHoras()
     return () => { vigente = false }
-  }, [paso, especialidadId, sedeId, dia])
+  }, [paso, especialidadId, sedeId, dia, festivos])
 
   const especialidad = especialidades.find((e) => e.id === especialidadId)
   const sede = sedes.find((s) => s.id === sedeId)
@@ -222,11 +249,23 @@ function AgendarCita({ alTerminar, alVerCitas }) {
               <label htmlFor="dia" className="form-label h6">Día</label>
               <input id="dia" type="date" className="form-control form-control-lg" value={dia}
                 min={diaISO(1)} max={diaISO(45)} onChange={(e) => setDia(e.target.value)} />
-              <div className="form-text">Atención de lunes a viernes. Puedes agendar hasta con 45 días de anticipación.</div>
+              <div className="form-text">Atención de lunes a viernes, excepto festivos. Puedes agendar hasta con 45 días de anticipación.</div>
+              {estadoFestivos === 'cargando' && (
+                <div className="form-text" role="status">Consultando los festivos de Colombia…</div>
+              )}
+              {estadoFestivos === 'error' && (
+                <div className="form-text text-danger">
+                  No pudimos consultar los festivos. Puedes seguir agendando; si eliges un festivo, la sede no tendrá agenda ese día.
+                </div>
+              )}
             </div>
 
             {!sedeId ? (
               <p className="text-secondary">Elige una sede para ver las horas disponibles.</p>
+            ) : festivos.has(dia) ? (
+              <Alerta tipo="aviso" titulo="Ese día es festivo">
+                El {diaLegible(dia)} es festivo en Colombia ({festivos.get(dia)}) y no hay atención. Elige otro día.
+              </Alerta>
             ) : cargandoHoras ? (
               <Cargando texto="Buscando horas con cupo…" />
             ) : errorHoras ? (
