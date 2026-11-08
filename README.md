@@ -24,7 +24,10 @@ Es una cuenta de demostración y no contiene datos reales. También puedes crear
 - React 19 con Vite 8
 - Bootstrap 5.3
 
-(Se completa con las versiones de Supabase, la API de festivos, Gemini y Vercel al integrarlas.)
+- Supabase JS 2 (autenticación y base de datos)
+- API REST Nager.Date v3 (festivos)
+
+(Se completa con Gemini y Vercel al integrarlos.)
 
 ## Instalación y ejecución en local
 
@@ -43,6 +46,14 @@ npm run dev
 ![Diagrama de arquitectura técnica de Mi Cita](docs/arquitectura.png)
 
 Fondo azul: frontend. Fondo verde: servicios cloud. Fondo amarillo: API externas. Detalle de cada capa en la [planificación](docs/planificacion.md#4-arquitectura-técnica).
+
+## API REST externa: festivos de Colombia
+
+- API: [Nager.Date](https://date.nager.at), endpoint `GET https://date.nager.at/api/v3/PublicHolidays/{año}/CO`.
+- Para qué se usa: en el paso 3 del agendamiento, la app bloquea los días festivos de Colombia y muestra el nombre del festivo, para no ofrecer citas en días sin atención. Los festivos colombianos se trasladan a lunes y cambian cada año, por eso se consultan en vez de escribirlos en el código.
+- Autenticación: ninguna. Es una API pública y gratuita; no requiere clave.
+- Estados en la interfaz: mientras carga muestra "Consultando los festivos de Colombia…"; si la API falla, avisa y deja seguir agendando; si responde, bloquea los festivos. La respuesta se guarda en memoria para no repetir la petición.
+- Código: [`src/lib/festivos.js`](src/lib/festivos.js).
 
 ## Base de datos y seguridad
 
