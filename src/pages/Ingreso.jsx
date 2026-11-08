@@ -1,7 +1,7 @@
 // Pantalla de ingreso y registro.
 // Componente de formulario con validación: no deja enviar datos incompletos y explica qué corregir.
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { guardarPreferenciaRecordar, supabase } from '../lib/supabase'
 import Alerta from '../components/Alerta'
 
 // Traduce los errores de Supabase a mensajes que dicen qué pasó y qué hacer (heurística 9 de Nielsen)
@@ -34,6 +34,7 @@ function Ingreso() {
   const [enviando, setEnviando] = useState(false)
   const [aviso, setAviso] = useState(null) // { tipo, texto }
   const [mostrarClave, setMostrarClave] = useState(false)
+  const [recordarme, setRecordarme] = useState(true)
 
   const esRegistro = modo === 'registrarse'
 
@@ -45,6 +46,8 @@ function Ingreso() {
     if (Object.keys(encontrados).length > 0) return
 
     setEnviando(true)
+    // Se guarda antes de ingresar, para que la sesión nueva vaya al almacén elegido
+    guardarPreferenciaRecordar(recordarme)
     const credenciales = { email: correo.trim(), password: contrasena }
     const { data, error } = esRegistro
       ? await supabase.auth.signUp(credenciales)
@@ -119,6 +122,16 @@ function Ingreso() {
               ? <div id="error-contrasena" className="invalid-feedback d-block">{errores.contrasena}</div>
               : <div id="ayuda-contrasena" className="form-text">Mínimo 8 caracteres.</div>}
           </div>
+
+          {/* "Recordarme" y aviso de sesión (pantalla 01 del prototipo, frustración de Jorge) */}
+          <div className="form-check mb-1 recordarme">
+            <input id="recordarme" type="checkbox" className="form-check-input" checked={recordarme}
+              onChange={(e) => setRecordarme(e.target.checked)} />
+            <label htmlFor="recordarme" className="form-check-label">Recordarme en este dispositivo</label>
+          </div>
+          <p className="small text-secondary mb-4">
+            Así no tendrás que escribir la contraseña cada vez. Si usas un computador compartido, desmarca esta opción.
+          </p>
 
           <button type="submit" className="btn btn-primary btn-lg w-100" disabled={enviando}>
             {enviando ? 'Un momento…' : esRegistro ? 'Crear cuenta' : 'Ingresar'}
