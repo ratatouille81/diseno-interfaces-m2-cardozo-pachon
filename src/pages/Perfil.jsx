@@ -1,5 +1,6 @@
 // Perfil (pantalla 10 del prototipo): tamaño de letra y cierre de sesión.
 import Encabezado from '../components/Encabezado'
+import GrupoFamiliar from '../components/GrupoFamiliar'
 
 function Perfil({ correo, letraGrande, alCambiarLetra, alCerrarSesion }) {
   return (
@@ -23,6 +24,8 @@ function Perfil({ correo, letraGrande, alCambiarLetra, alCerrarSesion }) {
         <p className="small text-secondary mb-5">
           La letra más grande se aplica en toda la aplicación y se mantiene la próxima vez que entres desde este dispositivo.
         </p>
+
+        <GrupoFamiliar />
 
         <button type="button" className="btn btn-outline-primary btn-lg w-100" onClick={alCerrarSesion}>
           Cerrar sesión
