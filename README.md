@@ -35,6 +35,15 @@ npm run dev
 
 Fondo azul: frontend. Fondo verde: servicios cloud. Fondo amarillo: API externas. Detalle de cada capa en la [planificación](docs/planificacion.md#4-arquitectura-técnica).
 
+## Base de datos y seguridad
+
+La base de datos está en Supabase (PostgreSQL). El esquema y los datos de ejemplo están versionados en [`supabase/migrations/`](supabase/migrations/).
+
+- Todas las tablas tienen RLS (seguridad por fila) activada. Los catálogos (especialidades, sedes y agenda) solo se pueden leer, y solo con sesión iniciada. Cada usuario ve, crea y cancela únicamente sus propias citas.
+- Cancelar una cita cambia su estado a "Cancelada"; no la borra, para conservar el historial.
+- Un índice único impide que dos usuarios confirmen el mismo espacio de agenda.
+- La función `horarios_disponibles` es `SECURITY DEFINER` a propósito: necesita saber qué espacios están ocupados por citas de otros usuarios, que RLS no deja ver. Solo devuelve el id y la hora del espacio libre, nunca datos de otras personas, y no la pueden ejecutar visitantes sin sesión. El asesor de seguridad de Supabase la reporta como advertencia; se revisó y se mantiene por esta razón.
+
 ## Documentación
 
 - Planificación del proyecto: [docs/planificacion.md](docs/planificacion.md)
