@@ -1,7 +1,7 @@
 // Pantalla de ingreso y registro.
 // Componente de formulario con validación: no deja enviar datos incompletos y explica qué corregir.
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { guardarPreferenciaRecordar, supabase } from '../lib/supabase'
 import Alerta from '../components/Alerta'
 
 // Traduce los errores de Supabase a mensajes que dicen qué pasó y qué hacer (heurística 9 de Nielsen)
@@ -27,13 +27,14 @@ function validar({ correo, contrasena }) {
 }
 
 function Ingreso() {
-  const [modo, setModo] = useState('ingresar') // 'ingresar' o 'registrarse'
+  const [modo, setModo] = useState('ingresar') // 'ingresar', 'registrarse' o 'recuperar'
   const [correo, setCorreo] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [errores, setErrores] = useState({})
   const [enviando, setEnviando] = useState(false)
   const [aviso, setAviso] = useState(null) // { tipo, texto }
   const [mostrarClave, setMostrarClave] = useState(false)
+  const [recordarme, setRecordarme] = useState(true)
 
   const esRegistro = modo === 'registrarse'
 
@@ -45,6 +46,8 @@ function Ingreso() {
     if (Object.keys(encontrados).length > 0) return
 
     setEnviando(true)
+    // Se guarda antes de ingresar, para que la sesión nueva vaya al almacén elegido
+    guardarPreferenciaRecordar(recordarme)
     const credenciales = { email: correo.trim(), password: contrasena }
     const { data, error } = esRegistro
       ? await supabase.auth.signUp(credenciales)
@@ -62,10 +65,59 @@ function Ingreso() {
     // Si hubo sesión, App detecta el cambio y muestra el inicio
   }
 
-  function cambiarModo() {
-    setModo(esRegistro ? 'ingresar' : 'registrarse')
+  function cambiarModo(nuevo = esRegistro ? 'ingresar' : 'registrarse') {
+    setModo(nuevo)
     setErrores({})
     setAviso(null)
+  }
+
+  // "¿Olvidaste tu contraseña?" (pantalla 01 del prototipo): Supabase envía un enlace al correo.
+  // El mensaje de éxito es el mismo exista o no la cuenta, para no revelar qué correos están registrados.
+  async function recuperar(evento) {
+    evento.preventDefault()
+    setAviso(null)
+    const { correo: errorCorreo } = validar({ correo, contrasena: 'xxxxxxxx' })
+    setErrores(errorCorreo ? { correo: errorCorreo } : {})
+    if (errorCorreo) return
+    setEnviando(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(correo.trim(), { redirectTo: window.location.origin })
+    setEnviando(false)
+    if (error && (error.code === 'over_email_send_rate_limit' || error.status === 429)) {
+      setAviso({ tipo: 'error', texto: 'Ya se enviaron varios correos en poco tiempo. Espera una hora e intenta de nuevo.' })
+      return
+    }
+    if (error && error.code !== 'user_not_found') {
+      setAviso({ tipo: 'error', texto: 'No pudimos enviar el correo de recuperación en este momento. Intenta más tarde.' })
+      return
+    }
+    setAviso({ tipo: 'exito', texto: 'Si el correo está registrado, te llegará un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.' })
+  }
+
+  if (modo === 'recuperar') {
+    return (
+      <main className="contenedor-app contenido" aria-labelledby="titulo-recuperar">
+        <p className="marca mb-2" aria-hidden="true">Mi Cita</p>
+        <h1 id="titulo-recuperar" className="h4 fw-bold mb-1">Recupera tu contraseña</h1>
+        <p className="text-secondary mb-4">Escribe el correo de tu cuenta y te enviamos un enlace para crear una nueva.</p>
+        {aviso && <Alerta tipo={aviso.tipo}>{aviso.texto}</Alerta>}
+        <form onSubmit={recuperar} noValidate>
+          <div className="mb-4">
+            <label htmlFor="correo" className="form-label">Correo electrónico</label>
+            <input id="correo" type="email" autoComplete="email"
+              className={`form-control form-control-lg ${errores.correo ? 'is-invalid' : ''}`}
+              value={correo} onChange={(e) => setCorreo(e.target.value)}
+              aria-invalid={Boolean(errores.correo)} aria-describedby={errores.correo ? 'error-correo' : undefined} />
+            {errores.correo && <div id="error-correo" className="invalid-feedback">{errores.correo}</div>}
+          </div>
+          <button type="submit" className="btn btn-primary btn-lg w-100" disabled={enviando}>
+            {enviando ? 'Enviando…' : 'Enviar enlace'}
+          </button>
+        </form>
+        <p className="text-center mt-3">
+          <button type="button" className="btn btn-link p-0" onClick={() => cambiarModo('ingresar')}>Volver a ingresar</button>
+        </p>
+      </main>
+    )
   }
 
   return (
@@ -120,6 +172,24 @@ function Ingreso() {
               : <div id="ayuda-contrasena" className="form-text">Mínimo 8 caracteres.</div>}
           </div>
 
+          {!esRegistro && (
+            <p className="mb-3">
+              <button type="button" className="btn btn-link p-0" onClick={() => cambiarModo('recuperar')}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </p>
+          )}
+
+          {/* "Recordarme" y aviso de sesión (pantalla 01 del prototipo, frustración de Jorge) */}
+          <div className="form-check mb-1 recordarme">
+            <input id="recordarme" type="checkbox" className="form-check-input" checked={recordarme}
+              onChange={(e) => setRecordarme(e.target.checked)} />
+            <label htmlFor="recordarme" className="form-check-label">Recordarme en este dispositivo</label>
+          </div>
+          <p className="small text-secondary mb-4">
+            Así no tendrás que escribir la contraseña cada vez. Si usas un computador compartido, desmarca esta opción.
+          </p>
+
           <button type="submit" className="btn btn-primary btn-lg w-100" disabled={enviando}>
             {enviando ? 'Un momento…' : esRegistro ? 'Crear cuenta' : 'Ingresar'}
           </button>
@@ -127,7 +197,7 @@ function Ingreso() {
 
         <p className="text-center mt-3">
           {esRegistro ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?'}{' '}
-          <button type="button" className="btn btn-link p-0 align-baseline" onClick={cambiarModo}>
+          <button type="button" className="btn btn-link p-0 align-baseline" onClick={() => cambiarModo()}>
             {esRegistro ? 'Ingresar' : 'Crear una cuenta'}
           </button>
         </p>

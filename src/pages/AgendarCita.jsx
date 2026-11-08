@@ -6,7 +6,7 @@ import { diaLegible, diasHabiles, fechaLarga, hora } from '../lib/formato'
 import { obtenerFestivos } from '../lib/festivos'
 import { descripcionFamiliar, listarFamiliares } from '../lib/familiares'
 import Encabezado from '../components/Encabezado'
-import TarjetaOpcion from '../components/TarjetaOpcion'
+import TarjetaOpcion, { TarjetaAcceso } from '../components/TarjetaOpcion'
 import Cargando from '../components/Cargando'
 import Alerta from '../components/Alerta'
 import EstadoCita from '../components/EstadoCita'
@@ -21,13 +21,28 @@ const TITULOS = {
 
 const DIAS = diasHabiles(45)
 
-// "inicial" llega desde "Repetir última cita" con la especialidad y la sede ya elegidas
+// Compara sin tildes ni mayúsculas: "pediatria" encuentra "Pediatría"
+const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+const TITULAR = 'Yo (titular de la cuenta)'
+
+// Para quién era la cita que se reprograma: el titular, un familiar del grupo u otra persona
+function paraQuienInicial(reprogramar) {
+  if (!reprogramar) return 'yo'
+  if (reprogramar.familiarId) return `f-${reprogramar.familiarId}`
+  return reprogramar.paciente === TITULAR ? 'yo' : 'otra'
+}
+
+// "inicial" llega desde "Repetir última cita" o desde "Reprogramar", con la especialidad y la sede ya elegidas.
+// Si trae "reprogramar", al confirmar se crea la cita nueva y después se cancela la anterior.
 function AgendarCita({ inicial, alTerminar, alVerCitas }) {
+  const reprogramar = inicial?.reprogramar ?? null
   const [paso, setPaso] = useState(inicial ? 3 : 1)
 
   // Datos de la cita que se va armando
-  const [paraQuien, setParaQuien] = useState('yo') // 'yo', 'otra' o 'f-<id del familiar>'
-  const [nombre, setNombre] = useState('')
+  const [paraQuien, setParaQuien] = useState(paraQuienInicial(reprogramar)) // 'yo', 'otra' o 'f-<id del familiar>'
+  const [nombre, setNombre] = useState(reprogramar && paraQuienInicial(reprogramar) === 'otra' ? reprogramar.paciente : '')
+  const [busqueda, setBusqueda] = useState('')
   const [especialidadId, setEspecialidadId] = useState(inicial?.especialidadId ?? null)
   const [sedeId, setSedeId] = useState(inicial?.sedeId ?? null)
   const [dia, setDia] = useState(DIAS[0]?.iso ?? '')
@@ -49,9 +64,15 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   const [festivos, setFestivos] = useState(new Map())
   const [estadoFestivos, setEstadoFestivos] = useState('cargando')
 
+  // "Sin agenda" (pantalla 06 del prototipo): alternativas con cupo calculadas de verdad
+  const [pidioAlternativas, setPidioAlternativas] = useState(false)
+  const [alternativas, setAlternativas] = useState(null) // null = sin calcular; { otrasSedes, proximoDia }
+  const [buscandoAlternativas, setBuscandoAlternativas] = useState(false)
+
   const [errorPaso, setErrorPaso] = useState(null)
   const [confirmando, setConfirmando] = useState(false)
   const [citaCreada, setCitaCreada] = useState(null)
+  const [avisoReprogramacion, setAvisoReprogramacion] = useState(null)
 
   // Al cambiar de paso, el foco va al título para que el lector de pantalla anuncie dónde está el usuario
   const tituloRef = useRef(null)
@@ -124,10 +145,47 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
     return () => { vigente = false }
   }, [paso, especialidadId, sedeId, dia, festivos])
 
+  // Cuando el día no tiene cupo (o el paciente pide otras opciones), busca alternativas:
+  // el mismo día en otras sedes y el siguiente día hábil con cupo en la misma sede.
+  const sinCupo = paso === 3 && sedeId && !cargandoHoras && !errorHoras && horas.length === 0
+  const buscarAlternativas = sinCupo || (paso === 3 && pidioAlternativas)
+  useEffect(() => {
+    if (!buscarAlternativas || !especialidadId || !sedeId) return
+    let vigente = true
+    async function calcular() {
+      setBuscandoAlternativas(true)
+      const contar = async (sede, d) => {
+        const { data, error } = await supabase.rpc('horarios_disponibles', { p_especialidad: especialidadId, p_sede: sede, p_dia: d })
+        return error ? 0 : data.length
+      }
+      const otrasSedes = []
+      if (!festivos.has(dia)) {
+        for (const s of sedes.filter((s) => s.id !== sedeId)) {
+          const n = await contar(s.id, dia)
+          if (n > 0) otrasSedes.push({ sede: s, n })
+        }
+      }
+      let proximoDia = null
+      const siguientes = DIAS.filter((d) => d.iso > dia && !festivos.has(d.iso)).slice(0, 10)
+      for (const d of siguientes) {
+        const n = await contar(sedeId, d.iso)
+        if (n > 0) {
+          proximoDia = { ...d, n }
+          break
+        }
+      }
+      if (!vigente) return
+      setAlternativas({ otrasSedes, proximoDia })
+      setBuscandoAlternativas(false)
+    }
+    calcular()
+    return () => { vigente = false }
+  }, [buscarAlternativas, especialidadId, sedeId, dia, festivos, sedes])
+
   const especialidad = especialidades.find((e) => e.id === especialidadId)
   const sede = sedes.find((s) => s.id === sedeId)
   const familiar = paraQuien.startsWith('f-') ? familiares.find((f) => `f-${f.id}` === paraQuien) : null
-  const nombrePaciente = paraQuien === 'yo' ? 'Yo (titular de la cuenta)' : familiar ? familiar.nombre : nombre.trim()
+  const nombrePaciente = paraQuien === 'yo' ? TITULAR : familiar ? familiar.nombre : nombre.trim()
 
   // Al elegir una opción se borra el aviso: el usuario ya corrigió lo que faltaba
   const conLimpieza = (setter) => (valor) => {
@@ -188,6 +246,14 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
       }
       return
     }
+    // Reprogramar: la cita nueva ya quedó guardada; ahora se cancela la anterior.
+    // En este orden, si algo falla el paciente nunca se queda sin cita.
+    if (reprogramar) {
+      const { error: errorCancelar } = await supabase.from('citas').update({ estado: 'Cancelada' }).eq('id', reprogramar.id)
+      setAvisoReprogramacion(errorCancelar
+        ? `Tu cita nueva quedó confirmada, pero no pudimos cancelar la cita n.º ${reprogramar.id}. Cancélala desde Mis citas.`
+        : `La cita n.º ${reprogramar.id} del ${fechaLarga(reprogramar.fechaHora)} quedó cancelada y su hora se liberó.`)
+    }
     window.scrollTo(0, 0)
     setCitaCreada(data)
   }
@@ -198,7 +264,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
       <main className="contenedor-app contenido contenido--con-acciones text-center" aria-labelledby="titulo-confirmada">
         <IconoConfirmada className="mt-4 mb-3" />
         <h1 id="titulo-confirmada" ref={tituloRef} tabIndex={-1} className="titulo-pantalla mb-1">
-          ¡Tu cita quedó confirmada!
+          {reprogramar ? '¡Tu cita quedó reprogramada!' : '¡Tu cita quedó confirmada!'}
         </h1>
         <p className="fw-semibold mb-3">Número de cita: {citaCreada.id}</p>
         <div className="tarjeta text-start mb-3">
@@ -211,6 +277,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
           </p>
           <EstadoCita estado="Confirmada" />
         </div>
+        {avisoReprogramacion && <p className="small text-start tarjeta">{avisoReprogramacion}</p>}
         <p className="small text-secondary">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
         <div className="acciones-fijas">
           <div className="contenedor-app d-flex flex-column gap-2">
@@ -227,7 +294,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   if (cargandoCatalogos || errorCatalogos) {
     return (
       <>
-        <Encabezado titulo="Agendar cita" alVolver={alTerminar} derecha={derechaPaso} />
+        <Encabezado titulo={reprogramar ? 'Reprogramar cita' : 'Agendar cita'} alVolver={alTerminar} derecha={derechaPaso} />
         <main className="contenedor-app contenido">
           {errorCatalogos ? <Alerta tipo="error">{errorCatalogos}</Alerta> : <Cargando texto="Preparando el agendamiento…" />}
         </main>
@@ -239,7 +306,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
 
   return (
     <>
-      <Encabezado titulo="Agendar cita" alVolver={atras} derecha={derechaPaso} />
+      <Encabezado titulo={reprogramar ? 'Reprogramar cita' : 'Agendar cita'} alVolver={atras} derecha={derechaPaso} />
       <main className="contenedor-app contenido contenido--con-acciones">
         <h1 ref={tituloRef} tabIndex={-1} className="titulo-pantalla">{TITULOS[paso]}</h1>
 
@@ -273,10 +340,35 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
         {paso === 2 && (
           <fieldset>
             <legend className="visually-hidden">Especialidad</legend>
-            {especialidades.map((e) => (
-              <TarjetaOpcion key={e.id} nombre="especialidad" valor={e.id} seleccionado={especialidadId === e.id}
-                alElegir={conLimpieza(setEspecialidadId)} titulo={e.nombre} descripcion={e.descripcion} />
-            ))}
+            {/* Buscador de la pantalla 04 del prototipo: atajo para quien ya sabe qué busca (heurística 7) */}
+            <div className="mb-3">
+              <label htmlFor="buscar-especialidad" className="form-label">Buscar especialidad</label>
+              <input id="buscar-especialidad" type="search" className="form-control form-control-lg"
+                placeholder="Por ejemplo: pediatría" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+                aria-describedby="resultado-busqueda" autoComplete="off" />
+            </div>
+            {(() => {
+              const visibles = especialidades.filter((e) =>
+                normalizar(`${e.nombre} ${e.descripcion}`).includes(normalizar(busqueda.trim())))
+              return (
+                <>
+                  <p id="resultado-busqueda" className="small text-secondary mb-2" role="status">
+                    {busqueda.trim()
+                      ? visibles.length === 0
+                        ? `No encontramos "${busqueda.trim()}". Revisa cómo lo escribiste o mira la lista completa.`
+                        : `${visibles.length} ${visibles.length === 1 ? 'especialidad encontrada' : 'especialidades encontradas'}`
+                      : ''}
+                  </p>
+                  {visibles.map((e) => (
+                    <TarjetaOpcion key={e.id} nombre="especialidad" valor={e.id} seleccionado={especialidadId === e.id}
+                      alElegir={conLimpieza(setEspecialidadId)} titulo={e.nombre} descripcion={e.descripcion} />
+                  ))}
+                  {busqueda.trim() && visibles.length === 0 && (
+                    <button type="button" className="btn btn-link p-0 mb-2" onClick={() => setBusqueda('')}>Ver todas las especialidades</button>
+                  )}
+                </>
+              )
+            })()}
             {/* Ayuda contextual de la pantalla 04 del prototipo (heurística 10) */}
             <div className="tarjeta mt-3" style={{ background: 'var(--mc-primario-claro)', borderColor: '#c9dcf2' }}>
               <p className="fw-semibold mb-1">¿No sabes cuál elegir?</p>
@@ -294,7 +386,8 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
               <legend className="h6 fw-bold mb-3">Sede</legend>
               {sedes.map((s) => (
                 <TarjetaOpcion key={s.id} nombre="sede" valor={s.id} seleccionado={sedeId === s.id}
-                  alElegir={conLimpieza(setSedeId)} titulo={s.nombre} descripcion={s.direccion} />
+                  alElegir={(v) => { conLimpieza(setSedeId)(v); setPidioAlternativas(false); setAlternativas(null) }}
+                  titulo={s.nombre} descripcion={s.direccion} />
               ))}
             </fieldset>
 
@@ -315,7 +408,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
                   return (
                     <button key={d.iso} type="button" className="pastilla" aria-pressed={dia === d.iso}
                       disabled={Boolean(festivo)} title={festivo ? `Festivo: ${festivo}` : undefined}
-                      onClick={() => conLimpieza(setDia)(d.iso)}>
+                      onClick={() => { conLimpieza(setDia)(d.iso); setPidioAlternativas(false); setAlternativas(null) }}>
                       {d.rotulo}
                       {/* Texto extra solo para lectores de pantalla: el nombre conserva lo visible (WCAG 2.5.3) */}
                       <span className="visually-hidden"> de {d.mes}{festivo ? `, festivo (${festivo}), sin atención` : ''}</span>
@@ -354,6 +447,36 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
                 ))}
               </div>
             )}
+
+            {sedeId && horas.length > 0 && !pidioAlternativas && (
+              <button type="button" className="btn btn-link p-0 mt-3 boton-enlace" onClick={() => setPidioAlternativas(true)}>
+                No encuentro un horario que me sirva
+              </button>
+            )}
+
+            {buscarAlternativas && sedeId && (
+              <section className="mt-3" aria-labelledby="titulo-alternativas">
+                <h2 id="titulo-alternativas" className="h6 fw-bold mb-2">Opciones con cupo</h2>
+                {buscandoAlternativas || alternativas === null ? (
+                  <Cargando texto="Buscando otras opciones…" />
+                ) : alternativas.otrasSedes.length === 0 && !alternativas.proximoDia ? (
+                  <p className="text-secondary">No encontramos cupo cercano. Prueba con otra especialidad o una fecha más adelante.</p>
+                ) : (
+                  <>
+                    {alternativas.otrasSedes.map(({ sede: s, n }) => (
+                      <TarjetaAcceso key={s.id} titulo={`${s.nombre}, mismo día`}
+                        descripcion={`${n} ${n === 1 ? 'hora disponible' : 'horas disponibles'} el ${diaLegible(dia)}`}
+                        alElegir={() => { conLimpieza(setSedeId)(s.id); setPidioAlternativas(false); setAlternativas(null); window.scrollTo(0, 0) }} />
+                    ))}
+                    {alternativas.proximoDia && (
+                      <TarjetaAcceso titulo={`${alternativas.proximoDia.rotulo} de ${alternativas.proximoDia.mes}, misma sede`}
+                        descripcion={`${alternativas.proximoDia.n} ${alternativas.proximoDia.n === 1 ? 'hora disponible' : 'horas disponibles'} en ${sede?.nombre}`}
+                        alElegir={() => { conLimpieza(setDia)(alternativas.proximoDia.iso); setPidioAlternativas(false); setAlternativas(null) }} />
+                    )}
+                  </>
+                )}
+              </section>
+            )}
           </>
         )}
 
@@ -378,6 +501,12 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
                 </div>
               ))}
             </div>
+            {reprogramar && (
+              <Alerta tipo="info">
+                Al confirmar, tu cita n.º {reprogramar.id} del {fechaLarga(reprogramar.fechaHora)}, {hora(reprogramar.fechaHora)} se cancelará
+                y su hora quedará libre para otra persona.
+              </Alerta>
+            )}
             <div className="tarjeta" style={{ background: 'var(--mc-pendiente-fondo)', borderColor: '#f3d48a' }}>
               <p className="mb-0 small">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
             </div>

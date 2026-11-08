@@ -369,3 +369,25 @@ fieldset {
   min-width: 0;
   padding: 0 4px;
 }
+
+/* Casilla "Recordarme": 24 px como en el prototipo y con el color principal */
+.recordarme .form-check-input {
+  width: 24px;
+  height: 24px;
+  margin-top: 0;
+  margin-right: 10px;
+}
+.recordarme {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-left: 0;
+}
+.recordarme .form-check-input {
+  margin-left: 0;
+  float: none;
+}
+.form-check-input:checked {
+  background-color: var(--mc-primario);
+  border-color: var(--mc-primario);
+}

@@ -15,7 +15,7 @@ function estadoVisible(cita) {
   return cita.estado
 }
 
-function TarjetaCita({ cita, alCancelar }) {
+function TarjetaCita({ cita, alCancelar, alReprogramar }) {
   const estado = estadoVisible(cita)
   return (
     <li className="tarjeta mb-3">
@@ -27,15 +27,21 @@ function TarjetaCita({ cita, alCancelar }) {
       <EstadoCita estado={estado} />
       <p className="small text-secondary mt-2 mb-0">Cita n.º {cita.id}</p>
       {estado === 'Confirmada' && (
-        <button type="button" className="btn btn-link p-0 mt-2 boton-enlace" onClick={() => alCancelar(cita)}>
-          Cancelar cita
-        </button>
+        // Acciones de la pantalla 09 del prototipo: Reprogramar y Cancelar
+        <div className="d-flex gap-4 mt-2">
+          <button type="button" className="btn btn-link p-0 boton-enlace" onClick={() => alReprogramar(cita)}>
+            Reprogramar
+          </button>
+          <button type="button" className="btn btn-link p-0 boton-enlace" onClick={() => alCancelar(cita)}>
+            Cancelar cita
+          </button>
+        </div>
       )}
     </li>
   )
 }
 
-function MisCitas({ alAgendar }) {
+function MisCitas({ alAgendar, alReprogramar }) {
   const [citas, setCitas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -51,7 +57,7 @@ function MisCitas({ alAgendar }) {
     let vigente = true
     supabase
       .from('citas')
-      .select('id, paciente, estado, agenda:agenda_id (fecha_hora, especialidad:especialidad_id (nombre), sede:sede_id (nombre, direccion))')
+      .select('id, paciente, estado, familiar_id, agenda:agenda_id (fecha_hora, especialidad_id, sede_id, especialidad:especialidad_id (nombre), sede:sede_id (nombre, direccion))')
       .then(({ data, error: errorConsulta }) => {
         if (!vigente) return
         if (errorConsulta) {
@@ -116,7 +122,7 @@ function MisCitas({ alAgendar }) {
           </div>
         ) : (
           <ul className="list-unstyled mb-4">
-            {proximas.map((c) => <TarjetaCita key={c.id} cita={c} alCancelar={setPorCancelar} />)}
+            {proximas.map((c) => <TarjetaCita key={c.id} cita={c} alCancelar={setPorCancelar} alReprogramar={alReprogramar} />)}
           </ul>
         )}
 
@@ -124,7 +130,7 @@ function MisCitas({ alAgendar }) {
           <>
             <h2 className="h6 fw-bold mb-3">Historial</h2>
             <ul className="list-unstyled mb-0">
-              {historial.map((c) => <TarjetaCita key={c.id} cita={c} alCancelar={setPorCancelar} />)}
+              {historial.map((c) => <TarjetaCita key={c.id} cita={c} alCancelar={setPorCancelar} alReprogramar={alReprogramar} />)}
             </ul>
           </>
         )}
