@@ -29,10 +29,16 @@ cp .env.example .env   # y llena los valores
 npm run dev
 ```
 
+## Arquitectura
+
+![Diagrama de arquitectura técnica de Mi Cita](docs/arquitectura.png)
+
+Fondo azul: frontend. Fondo verde: servicios cloud. Fondo amarillo: API externas. Detalle de cada capa en la [planificación](docs/planificacion.md#4-arquitectura-técnica).
+
 ## Documentación
 
 - Planificación del proyecto: [docs/planificacion.md](docs/planificacion.md)
 
 ## Pendiente
 
-Enlace a la demo, diagrama de arquitectura, funcionalidades implementadas, pruebas, créditos de API y servicios, y declaración de uso de inteligencia artificial.
+Enlace a la demo, funcionalidades implementadas, pruebas, créditos de API y servicios, y declaración de uso de inteligencia artificial.

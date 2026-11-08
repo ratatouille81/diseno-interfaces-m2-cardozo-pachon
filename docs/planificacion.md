@@ -60,18 +60,11 @@ Afiliados a una EPS en Colombia que agendan citas desde el celular. Se mantienen
 | Función serverless | Función de Vercel | Recibe la pregunta del frontend, llama a Gemini con la clave guardada en el servidor y devuelve la respuesta en streaming | La guía exige que la clave no quede en el frontend |
 | Despliegue | Vercel, conectado al repositorio de GitHub | Publicar la demo y la función serverless en un solo lugar | [DATO A VERIFICAR: límites del plan gratuito] |
 
-Diagrama provisional (el definitivo se exporta como imagen desde FigJam, la misma herramienta de los diagramas del módulo 1):
+Diagrama de arquitectura (elaborado en FigJam, la misma herramienta de los diagramas del módulo 1):
 
-```mermaid
-flowchart LR
-  U[Paciente en el navegador] --> FE[Frontend React + Vite<br/>publicado en Vercel]
-  FE -->|inicio de sesión y citas| SB[(Supabase<br/>Auth + PostgreSQL + RLS)]
-  FE -->|GET festivos| ND[API Nager.Date]
-  FE -->|pregunta del paciente| FN[Función serverless en Vercel<br/>guarda la clave]
-  FN -->|prompt| GM[API de Gemini]
-  GM -->|respuesta en streaming| FN
-  FN -->|texto en tiempo real| FE
-```
+![Diagrama de arquitectura técnica de Mi Cita](arquitectura.png)
+
+Leyenda de capas: fondo azul, capa frontend; fondo verde, capa de servicios cloud; fondo amarillo, capa de API externas. Las flechas continuas son solicitudes y las punteadas son respuestas que llegan en streaming. La aplicación del navegador nunca habla directamente con Gemini: lo hace a través de la función serverless, que es la única que conoce la clave.
 
 Regla de seguridad: ninguna clave secreta va en el código del frontend. La clave de Gemini solo existe como variable de entorno en Vercel. El frontend usa la clave pública (anon) de Supabase, que está pensada para el navegador y queda protegida por las reglas RLS. El archivo `.env` está en `.gitignore` y el repositorio incluye un `.env.example` sin valores reales.
 
