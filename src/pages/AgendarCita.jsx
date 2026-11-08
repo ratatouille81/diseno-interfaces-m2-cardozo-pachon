@@ -24,13 +24,24 @@ const DIAS = diasHabiles(45)
 // Compara sin tildes ni mayúsculas: "pediatria" encuentra "Pediatría"
 const normalizar = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
-// "inicial" llega desde "Repetir última cita" con la especialidad y la sede ya elegidas
+const TITULAR = 'Yo (titular de la cuenta)'
+
+// Para quién era la cita que se reprograma: el titular, un familiar del grupo u otra persona
+function paraQuienInicial(reprogramar) {
+  if (!reprogramar) return 'yo'
+  if (reprogramar.familiarId) return `f-${reprogramar.familiarId}`
+  return reprogramar.paciente === TITULAR ? 'yo' : 'otra'
+}
+
+// "inicial" llega desde "Repetir última cita" o desde "Reprogramar", con la especialidad y la sede ya elegidas.
+// Si trae "reprogramar", al confirmar se crea la cita nueva y después se cancela la anterior.
 function AgendarCita({ inicial, alTerminar, alVerCitas }) {
+  const reprogramar = inicial?.reprogramar ?? null
   const [paso, setPaso] = useState(inicial ? 3 : 1)
 
   // Datos de la cita que se va armando
-  const [paraQuien, setParaQuien] = useState('yo') // 'yo', 'otra' o 'f-<id del familiar>'
-  const [nombre, setNombre] = useState('')
+  const [paraQuien, setParaQuien] = useState(paraQuienInicial(reprogramar)) // 'yo', 'otra' o 'f-<id del familiar>'
+  const [nombre, setNombre] = useState(reprogramar && paraQuienInicial(reprogramar) === 'otra' ? reprogramar.paciente : '')
   const [busqueda, setBusqueda] = useState('')
   const [especialidadId, setEspecialidadId] = useState(inicial?.especialidadId ?? null)
   const [sedeId, setSedeId] = useState(inicial?.sedeId ?? null)
@@ -61,6 +72,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   const [errorPaso, setErrorPaso] = useState(null)
   const [confirmando, setConfirmando] = useState(false)
   const [citaCreada, setCitaCreada] = useState(null)
+  const [avisoReprogramacion, setAvisoReprogramacion] = useState(null)
 
   // Al cambiar de paso, el foco va al título para que el lector de pantalla anuncie dónde está el usuario
   const tituloRef = useRef(null)
@@ -173,7 +185,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   const especialidad = especialidades.find((e) => e.id === especialidadId)
   const sede = sedes.find((s) => s.id === sedeId)
   const familiar = paraQuien.startsWith('f-') ? familiares.find((f) => `f-${f.id}` === paraQuien) : null
-  const nombrePaciente = paraQuien === 'yo' ? 'Yo (titular de la cuenta)' : familiar ? familiar.nombre : nombre.trim()
+  const nombrePaciente = paraQuien === 'yo' ? TITULAR : familiar ? familiar.nombre : nombre.trim()
 
   // Al elegir una opción se borra el aviso: el usuario ya corrigió lo que faltaba
   const conLimpieza = (setter) => (valor) => {
@@ -234,6 +246,14 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
       }
       return
     }
+    // Reprogramar: la cita nueva ya quedó guardada; ahora se cancela la anterior.
+    // En este orden, si algo falla el paciente nunca se queda sin cita.
+    if (reprogramar) {
+      const { error: errorCancelar } = await supabase.from('citas').update({ estado: 'Cancelada' }).eq('id', reprogramar.id)
+      setAvisoReprogramacion(errorCancelar
+        ? `Tu cita nueva quedó confirmada, pero no pudimos cancelar la cita n.º ${reprogramar.id}. Cancélala desde Mis citas.`
+        : `La cita n.º ${reprogramar.id} del ${fechaLarga(reprogramar.fechaHora)} quedó cancelada y su hora se liberó.`)
+    }
     window.scrollTo(0, 0)
     setCitaCreada(data)
   }
@@ -244,7 +264,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
       <main className="contenedor-app contenido contenido--con-acciones text-center" aria-labelledby="titulo-confirmada">
         <IconoConfirmada className="mt-4 mb-3" />
         <h1 id="titulo-confirmada" ref={tituloRef} tabIndex={-1} className="titulo-pantalla mb-1">
-          ¡Tu cita quedó confirmada!
+          {reprogramar ? '¡Tu cita quedó reprogramada!' : '¡Tu cita quedó confirmada!'}
         </h1>
         <p className="fw-semibold mb-3">Número de cita: {citaCreada.id}</p>
         <div className="tarjeta text-start mb-3">
@@ -257,6 +277,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
           </p>
           <EstadoCita estado="Confirmada" />
         </div>
+        {avisoReprogramacion && <p className="small text-start tarjeta">{avisoReprogramacion}</p>}
         <p className="small text-secondary">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
         <div className="acciones-fijas">
           <div className="contenedor-app d-flex flex-column gap-2">
@@ -273,7 +294,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   if (cargandoCatalogos || errorCatalogos) {
     return (
       <>
-        <Encabezado titulo="Agendar cita" alVolver={alTerminar} derecha={derechaPaso} />
+        <Encabezado titulo={reprogramar ? 'Reprogramar cita' : 'Agendar cita'} alVolver={alTerminar} derecha={derechaPaso} />
         <main className="contenedor-app contenido">
           {errorCatalogos ? <Alerta tipo="error">{errorCatalogos}</Alerta> : <Cargando texto="Preparando el agendamiento…" />}
         </main>
@@ -285,7 +306,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
 
   return (
     <>
-      <Encabezado titulo="Agendar cita" alVolver={atras} derecha={derechaPaso} />
+      <Encabezado titulo={reprogramar ? 'Reprogramar cita' : 'Agendar cita'} alVolver={atras} derecha={derechaPaso} />
       <main className="contenedor-app contenido contenido--con-acciones">
         <h1 ref={tituloRef} tabIndex={-1} className="titulo-pantalla">{TITULOS[paso]}</h1>
 
@@ -480,6 +501,12 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
                 </div>
               ))}
             </div>
+            {reprogramar && (
+              <Alerta tipo="info">
+                Al confirmar, tu cita n.º {reprogramar.id} del {fechaLarga(reprogramar.fechaHora)}, {hora(reprogramar.fechaHora)} se cancelará
+                y su hora quedará libre para otra persona.
+              </Alerta>
+            )}
             <div className="tarjeta" style={{ background: 'var(--mc-pendiente-fondo)', borderColor: '#f3d48a' }}>
               <p className="mb-0 small">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
             </div>

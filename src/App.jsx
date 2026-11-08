@@ -64,12 +64,20 @@ function App() {
     <>
       {vista === 'agendar' ? (
         <AgendarCita
+          key={agendaInicial?.reprogramar?.id ?? 'nueva'}
           inicial={agendaInicial}
           alTerminar={() => navegar('inicio')}
           alVerCitas={() => navegar('mis-citas')}
         />
       ) : vista === 'mis-citas' ? (
-        <MisCitas alAgendar={() => agendar()} />
+        <MisCitas
+          alAgendar={() => agendar()}
+          alReprogramar={(cita) => agendar({
+            especialidadId: cita.agenda.especialidad_id,
+            sedeId: cita.agenda.sede_id,
+            reprogramar: { id: cita.id, paciente: cita.paciente, familiarId: cita.familiar_id, fechaHora: cita.agenda.fecha_hora },
+          })}
+        />
       ) : vista === 'asistente' ? (
         <Asistente />
       ) : vista === 'perfil' ? (
