@@ -10,7 +10,9 @@ export function fechaLarga(valor) {
 export function hora(valor) {
   return new Intl.DateTimeFormat('es-CO', {
     hour: 'numeric', minute: '2-digit', hour12: true, timeZone: ZONA,
-  }).format(new Date(valor))
+  })
+    .format(new Date(valor))
+    .replace(/\s/g, '\u00a0') // espacios que no se parten: "9:00 a. m." nunca queda dividido en dos líneas
 }
 
 // Fecha de hoy + n días en formato AAAA-MM-DD (el que usan los campos de fecha y la base de datos)
