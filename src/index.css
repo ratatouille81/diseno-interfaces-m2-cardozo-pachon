@@ -1,21 +1,41 @@
-/* Colores del prototipo de Mi Cita (módulo 1), todos con contraste AA verificado */
+/* Mi Cita: estilos alineados con el prototipo del módulo 1 (Figma).
+   Los colores son las variables del archivo de Figma; todos tienen contraste AA verificado en el módulo 1. */
+@import '@fontsource-variable/inter';
+
 :root {
   --mc-primario: #0b5cad;
+  --mc-primario-claro: #e7f0fa;
   --mc-texto: #1b1f24;
   --mc-texto-secundario: #4b5563;
   --mc-fondo: #f5f7fa;
-  --mc-tarjeta: #ffffff;
+  --mc-superficie: #ffffff;
+  --mc-borde: #d0d5dd;
   --mc-confirmada: #1e7b34;
   --mc-confirmada-fondo: #e6f4ea;
   --mc-pendiente: #8a5a00;
   --mc-pendiente-fondo: #fff4db;
   --mc-cancelada: #b42318;
+  --mc-radio: 12px;
 
-  /* Se le pasan a Bootstrap para que sus componentes usen la misma paleta */
+  /* Se le pasan a Bootstrap para que sus componentes usen la misma paleta y tipografía */
   --bs-primary: var(--mc-primario);
   --bs-primary-rgb: 11, 92, 173;
   --bs-body-color: var(--mc-texto);
   --bs-body-bg: var(--mc-fondo);
+  --bs-secondary-color: var(--mc-texto-secundario);
+  --bs-border-color: var(--mc-borde);
+  --bs-body-font-family: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --bs-link-color: var(--mc-primario);
+  --bs-link-color-rgb: 11, 92, 173;
+}
+
+/* Letra más grande (pantallas 02b y 10 del prototipo): todo crece porque Bootstrap mide en rem */
+html.letra-grande {
+  font-size: 125%;
+}
+
+.text-secondary {
+  color: var(--mc-texto-secundario) !important;
 }
 
 /* Foco siempre visible al navegar con teclado (WCAG 2.4.7) */
@@ -24,7 +44,103 @@
   outline-offset: 2px;
 }
 
-/* Los botones de Bootstrap traen su propio azul; se reemplaza por el del prototipo (#0b5cad, contraste 6,7:1 con blanco) */
+/* Columna central: el diseño es para celular (390 px) y en pantallas grandes se centra */
+.contenedor-app {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.min-w-0 {
+  min-width: 0;
+}
+
+/* Encabezado del prototipo: 64 px, blanco, con borde inferior */
+.encabezado {
+  height: 64px;
+  background: var(--mc-superficie);
+  border-bottom: 1px solid var(--mc-borde);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.encabezado-titulo {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.boton-icono {
+  width: 48px;
+  height: 48px;
+  margin-left: -12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mc-primario);
+}
+.boton-letra {
+  min-height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mc-primario-claro);
+  color: var(--mc-primario);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Contenido: deja espacio abajo para que la barra inferior no tape nada */
+.contenido {
+  padding-top: 24px;
+  padding-bottom: 112px;
+}
+.titulo-pantalla {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+/* Barra inferior del prototipo: 72 px, fija abajo, ícono y texto */
+.barra-inferior {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  background: var(--mc-superficie);
+  border-top: 1px solid var(--mc-borde);
+  z-index: 20;
+}
+.barra-inferior-boton {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--mc-texto-secundario);
+  font-size: 0.8125rem;
+}
+.barra-inferior-boton--actual {
+  color: var(--mc-primario);
+  font-weight: 700;
+}
+
+/* Botones del prototipo: 52 px de alto, esquinas de 10 px */
+.btn-lg {
+  min-height: 52px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.btn-xl {
+  min-height: 64px;
+}
 .btn-primary {
   --bs-btn-bg: var(--mc-primario);
   --bs-btn-border-color: var(--mc-primario);
@@ -35,94 +151,151 @@
   --bs-btn-disabled-bg: var(--mc-primario);
   --bs-btn-disabled-border-color: var(--mc-primario);
 }
-
-.btn-link {
-  --bs-btn-color: var(--mc-primario);
-  --bs-btn-hover-color: #094a8b;
-}
-
-/* Botones de al menos 48 px de alto en pantallas táctiles (WCAG 2.5.8 y decisión del M1) */
-.btn-lg {
-  min-height: 48px;
-}
-
-/* Tarjetas seleccionables: área táctil grande y estado elegido visible por borde y peso, no solo por color */
-.tarjeta-opcion {
-  cursor: pointer;
-  min-height: 72px;
-  border: 2px solid #d0d7de;
-}
-.tarjeta-opcion--activa {
-  border-color: var(--mc-primario);
-  background-color: #eaf2fb;
-}
-
-/* Botón Atrás de 48 x 48 px como en el prototipo (WCAG 2.5.8) */
-.boton-atras {
-  min-height: 48px;
-  min-width: 48px;
-}
-
-/* Horas: botones parejos y fáciles de tocar */
-.boton-hora {
-  min-width: 112px;
-}
-
 .btn-outline-primary {
   --bs-btn-color: var(--mc-primario);
   --bs-btn-border-color: var(--mc-primario);
-  --bs-btn-hover-bg: var(--mc-primario);
+  --bs-btn-bg: var(--mc-superficie);
+  --bs-btn-hover-bg: var(--mc-primario-claro);
+  --bs-btn-hover-color: var(--mc-primario);
   --bs-btn-hover-border-color: var(--mc-primario);
-  --bs-btn-active-bg: #094a8b;
-  --bs-btn-active-border-color: #094a8b;
+  --bs-btn-active-bg: var(--mc-primario-claro);
+  --bs-btn-active-color: var(--mc-primario);
+  --bs-btn-active-border-color: var(--mc-primario);
 }
-
-/* Círculo de selección de las tarjetas con el color del prototipo */
-.form-check-input:checked {
-  background-color: var(--mc-primario);
-  border-color: var(--mc-primario);
-}
-.form-check-input:focus {
-  border-color: var(--mc-primario);
-  box-shadow: 0 0 0 0.25rem rgba(11, 92, 173, 0.25);
-}
-
-/* Barra de progreso del flujo */
-.progress-bar {
-  background-color: var(--mc-primario);
-}
-
-/* Menú principal: la sección actual se marca con subrayado grueso, no solo con color */
-.enlace-menu {
-  border: 0;
-  background: transparent;
-  border-bottom: 4px solid transparent;
-  border-radius: 0;
-  min-height: 48px;
-}
-.enlace-menu--actual {
-  border-bottom-color: #ffffff;
+.btn-link {
+  --bs-btn-color: var(--mc-primario);
+  --bs-btn-hover-color: #094a8b;
   font-weight: 600;
 }
-
-/* Botones de peligro con el rojo del prototipo (contraste 6,1:1) */
 .btn-danger {
   --bs-btn-bg: var(--mc-cancelada);
   --bs-btn-border-color: var(--mc-cancelada);
   --bs-btn-hover-bg: #921c13;
   --bs-btn-hover-border-color: #921c13;
 }
-.btn-outline-danger {
-  --bs-btn-color: var(--mc-cancelada);
-  --bs-btn-border-color: var(--mc-cancelada);
-  --bs-btn-hover-bg: var(--mc-cancelada);
-  --bs-btn-hover-border-color: var(--mc-cancelada);
+
+/* Campos del prototipo: 52 px de alto */
+.form-control-lg {
+  min-height: 52px;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+.form-label {
+  font-weight: 600;
+}
+
+/* Tarjetas del prototipo: superficie blanca, borde gris, esquinas de 12 px */
+.tarjeta {
+  background: var(--mc-superficie);
+  border: 1px solid var(--mc-borde);
+  border-radius: var(--mc-radio);
+  padding: 16px;
+}
+
+/* Tarjeta de opción: círculo con inicial, título y detalle; 74 px de alto mínimo */
+.tarjeta-opcion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 74px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: var(--mc-superficie);
+  border: 1px solid var(--mc-borde);
+  border-radius: var(--mc-radio);
+  cursor: pointer;
+  color: var(--mc-texto);
+}
+.tarjeta-opcion--activa {
+  border: 2px solid var(--mc-primario);
+  background: var(--mc-primario-claro);
+  padding: 11px 15px;
+}
+.tarjeta-opcion:has(input:focus-visible) {
+  outline: 3px solid var(--mc-primario);
+  outline-offset: 2px;
+}
+.tarjeta-inicial {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--mc-primario-claro);
+  color: var(--mc-primario);
+  font-weight: 700;
+}
+.tarjeta-opcion--activa .tarjeta-inicial {
+  background: var(--mc-superficie);
+}
+.tarjeta-marca {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 2px solid var(--mc-borde);
+  border-radius: 999px;
+}
+.tarjeta-marca--activa {
+  border: 7px solid var(--mc-primario);
+  background: var(--mc-superficie);
+}
+
+/* Pastillas de selección (días y horas): 76 x 48 px como en el prototipo */
+.pastilla {
+  min-width: 76px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--mc-borde);
+  border-radius: 10px;
+  background: var(--mc-superficie);
+  color: var(--mc-texto);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pastilla[aria-pressed='true'] {
+  background: var(--mc-primario);
+  border-color: var(--mc-primario);
+  color: #ffffff;
+}
+.pastilla:disabled {
+  background: #eef0f3;
+  color: var(--mc-texto-secundario);
+  text-decoration: line-through;
+}
+.fila-dias {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 4px 8px;
+  margin: 0 -4px;
+  scroll-snap-type: x proximity;
+}
+.fila-dias .pastilla {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Barra de acciones fija abajo en el flujo de agendar (botón Continuar del prototipo) */
+.acciones-fijas {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 72px;
+  padding: 12px 0;
+  background: linear-gradient(to top, var(--mc-fondo) 75%, transparent);
+  z-index: 15;
+}
+.contenido--con-acciones {
+  padding-bottom: 200px;
 }
 
 /* Ventana de confirmación */
 .dialogo {
-  width: min(92vw, 420px);
-  margin: auto; /* centrada vertical y horizontalmente */
+  width: min(92vw, 380px);
+  margin: auto;
+  border-radius: 16px;
 }
 .dialogo::backdrop {
   background: rgba(27, 31, 36, 0.55);
@@ -130,12 +303,69 @@
 
 /* Conversación del asistente */
 .mensaje-paciente {
-  background-color: #eaf2fb;
+  background-color: var(--mc-primario-claro);
   border-color: #c9dcf2;
-}
-.mensaje-asistente {
-  background-color: var(--mc-tarjeta);
 }
 .mensaje-texto {
   white-space: pre-wrap; /* respeta los saltos de línea de la respuesta */
+}
+
+/* Alertas con esquinas como las tarjetas */
+.alert {
+  border-radius: var(--mc-radio);
+}
+
+/* Ingreso: marca del prototipo y botón "Mostrar" dentro del campo de contraseña */
+.marca {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--mc-primario);
+  letter-spacing: -0.5px;
+}
+.boton-mostrar {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  min-height: 48px;
+  text-decoration: none;
+}
+
+/* Enlaces de acción dentro de tarjetas (Cancelar en Mis citas), con área táctil de 44 px */
+.boton-enlace {
+  min-height: 44px;
+  text-decoration: underline;
+}
+.btn-outline-danger {
+  --bs-btn-color: var(--mc-cancelada);
+  --bs-btn-border-color: var(--mc-cancelada);
+  --bs-btn-bg: var(--mc-superficie);
+  --bs-btn-hover-bg: #fdecea;
+  --bs-btn-hover-color: var(--mc-cancelada);
+  --bs-btn-hover-border-color: var(--mc-cancelada);
+  --bs-btn-active-bg: #fdecea;
+  --bs-btn-active-color: var(--mc-cancelada);
+}
+
+/* Los fieldset traen por defecto un ancho mínimo igual a su contenido: con la fila de 32 días
+   eso ensanchaba toda la página. Con min-width: 0 la fila se desplaza dentro de su propio espacio. */
+fieldset {
+  min-width: 0;
+}
+
+/* El texto oculto para lectores de pantalla usa position: absolute; con la pastilla como referencia
+   no se escapa de la fila desplazable ni ensancha la página */
+.pastilla,
+.fila-dias {
+  position: relative;
+}
+
+/* Horas en tres columnas parejas */
+.rejilla-horas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.rejilla-horas .pastilla {
+  min-width: 0;
+  padding: 0 4px;
 }

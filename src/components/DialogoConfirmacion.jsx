@@ -23,11 +23,12 @@ function DialogoConfirmacion({ abierto, titulo, children, textoConfirmar, textoC
         <h2 id="titulo-dialogo" className="h5">{titulo}</h2>
         <div className="mb-4">{children}</div>
         <div className="d-flex flex-column gap-2">
-          <button type="button" className="btn btn-danger btn-lg" onClick={alConfirmar} disabled={procesando}>
-            {procesando ? 'Un momento…' : textoConfirmar}
-          </button>
-          <button type="button" className="btn btn-outline-secondary btn-lg" onClick={alCerrar} disabled={procesando}>
+          {/* Como en el prototipo: primero la opción segura, para que un toque apresurado no cancele nada */}
+          <button type="button" className="btn btn-primary btn-lg" onClick={alCerrar} disabled={procesando}>
             {textoCancelar}
+          </button>
+          <button type="button" className="btn btn-outline-danger btn-lg" onClick={alConfirmar} disabled={procesando}>
+            {procesando ? 'Un momento…' : textoConfirmar}
           </button>
         </div>
       </div>

@@ -33,6 +33,7 @@ function Ingreso() {
   const [errores, setErrores] = useState({})
   const [enviando, setEnviando] = useState(false)
   const [aviso, setAviso] = useState(null) // { tipo, texto }
+  const [mostrarClave, setMostrarClave] = useState(false)
 
   const esRegistro = modo === 'registrarse'
 
@@ -68,16 +69,17 @@ function Ingreso() {
   }
 
   return (
-    <section className="row justify-content-center" aria-labelledby="titulo-ingreso">
-      <div className="col-12 col-sm-10 col-md-7 col-lg-5">
-        <h1 id="titulo-ingreso" className="h3 mb-1">{esRegistro ? 'Crea tu cuenta' : 'Ingresa a Mi Cita'}</h1>
+    <main className="contenedor-app contenido" aria-labelledby="titulo-ingreso">
+      <div>
+        <p className="marca mb-2" aria-hidden="true">Mi Cita</p>
+        <h1 id="titulo-ingreso" className="h4 fw-bold mb-1">{esRegistro ? 'Crea tu cuenta' : 'Ingresa a tu cuenta'}</h1>
         <p className="text-secondary mb-4">
-          {esRegistro ? 'Con tu cuenta agendas y consultas tus citas.' : 'Agenda tu cita médica en pocos pasos.'}
+          {esRegistro ? 'Con tu cuenta agendas y consultas tus citas.' : 'Agenda tu cita médica en pocos pasos y sin llamar.'}
         </p>
 
         {aviso && <Alerta tipo={aviso.tipo}>{aviso.texto}</Alerta>}
 
-        <form onSubmit={enviar} noValidate className="card card-body shadow-sm">
+        <form onSubmit={enviar} noValidate>
           <div className="mb-3">
             <label htmlFor="correo" className="form-label">Correo electrónico</label>
             <input
@@ -95,18 +97,26 @@ function Ingreso() {
 
           <div className="mb-4">
             <label htmlFor="contrasena" className="form-label">Contraseña</label>
+            <div className="position-relative">
             <input
               id="contrasena"
-              type="password"
+              type={mostrarClave ? 'text' : 'password'}
               autoComplete={esRegistro ? 'new-password' : 'current-password'}
               className={`form-control form-control-lg ${errores.contrasena ? 'is-invalid' : ''}`}
               value={contrasena}
               onChange={(e) => setContrasena(e.target.value)}
               aria-invalid={Boolean(errores.contrasena)}
               aria-describedby={errores.contrasena ? 'error-contrasena' : 'ayuda-contrasena'}
+              style={{ paddingRight: '96px' }}
             />
+            {/* "Mostrar" como en el prototipo: ayuda a no equivocarse al escribir (heurística 5) */}
+            <button type="button" className="btn btn-link boton-mostrar" onClick={() => setMostrarClave(!mostrarClave)}
+              aria-pressed={mostrarClave} aria-controls="contrasena">
+              {mostrarClave ? 'Ocultar' : 'Mostrar'}
+            </button>
+            </div>
             {errores.contrasena
-              ? <div id="error-contrasena" className="invalid-feedback">{errores.contrasena}</div>
+              ? <div id="error-contrasena" className="invalid-feedback d-block">{errores.contrasena}</div>
               : <div id="ayuda-contrasena" className="form-text">Mínimo 8 caracteres.</div>}
           </div>
 
@@ -122,7 +132,7 @@ function Ingreso() {
           </button>
         </p>
       </div>
-    </section>
+    </main>
   )
 }
 
