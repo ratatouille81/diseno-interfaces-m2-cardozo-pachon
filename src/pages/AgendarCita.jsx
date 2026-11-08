@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { diaLegible, diasHabiles, fechaLarga, hora } from '../lib/formato'
 import { obtenerFestivos } from '../lib/festivos'
+import { descripcionFamiliar, listarFamiliares } from '../lib/familiares'
 import Encabezado from '../components/Encabezado'
 import TarjetaOpcion from '../components/TarjetaOpcion'
 import Cargando from '../components/Cargando'
@@ -25,7 +26,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   const [paso, setPaso] = useState(inicial ? 3 : 1)
 
   // Datos de la cita que se va armando
-  const [paraQuien, setParaQuien] = useState('yo') // 'yo' o 'familiar'
+  const [paraQuien, setParaQuien] = useState('yo') // 'yo', 'otra' o 'f-<id del familiar>'
   const [nombre, setNombre] = useState('')
   const [especialidadId, setEspecialidadId] = useState(inicial?.especialidadId ?? null)
   const [sedeId, setSedeId] = useState(inicial?.sedeId ?? null)
@@ -34,6 +35,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
 
   // Catálogos que vienen de Supabase
   const [especialidades, setEspecialidades] = useState([])
+  const [familiares, setFamiliares] = useState([])
   const [sedes, setSedes] = useState([])
   const [cargandoCatalogos, setCargandoCatalogos] = useState(true)
   const [errorCatalogos, setErrorCatalogos] = useState(null)
@@ -60,10 +62,13 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
   // Carga especialidades y sedes una sola vez
   useEffect(() => {
     async function cargar() {
-      const [esp, sed] = await Promise.all([
+      const [esp, sed, fam] = await Promise.all([
         supabase.from('especialidades').select('id, nombre, descripcion').order('nombre'),
         supabase.from('sedes').select('id, nombre, direccion').order('nombre'),
+        listarFamiliares(),
       ])
+      // Si el grupo familiar no carga, se puede seguir agendando para uno mismo u otra persona
+      if (!fam.error) setFamiliares(fam.data)
       if (esp.error || sed.error) {
         setErrorCatalogos('No pudimos cargar las especialidades y sedes. Revisa tu conexión y vuelve a intentarlo.')
       } else {
@@ -121,7 +126,8 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
 
   const especialidad = especialidades.find((e) => e.id === especialidadId)
   const sede = sedes.find((s) => s.id === sedeId)
-  const nombrePaciente = paraQuien === 'yo' ? 'Yo (titular de la cuenta)' : nombre.trim()
+  const familiar = paraQuien.startsWith('f-') ? familiares.find((f) => `f-${f.id}` === paraQuien) : null
+  const nombrePaciente = paraQuien === 'yo' ? 'Yo (titular de la cuenta)' : familiar ? familiar.nombre : nombre.trim()
 
   // Al elegir una opción se borra el aviso: el usuario ya corrigió lo que faltaba
   const conLimpieza = (setter) => (valor) => {
@@ -137,8 +143,8 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
 
   function siguiente() {
     // Prevención de errores: no deja avanzar sin completar el paso (heurística 5 de Nielsen)
-    if (paso === 1 && paraQuien === 'familiar' && nombre.trim().length < 3) {
-      setErrorPaso('Escribe el nombre completo del familiar para continuar.')
+    if (paso === 1 && paraQuien === 'otra' && nombre.trim().length < 3) {
+      setErrorPaso('Escribe el nombre completo de la persona para continuar.')
       return
     }
     if (paso === 2 && !especialidadId) {
@@ -166,7 +172,7 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
     setErrorPaso(null)
     const { data, error } = await supabase
       .from('citas')
-      .insert({ agenda_id: espacio.agenda_id, paciente: nombrePaciente })
+      .insert({ agenda_id: espacio.agenda_id, paciente: nombrePaciente, familiar_id: familiar?.id ?? null })
       .select('id')
       .single()
     setConfirmando(false)
@@ -239,17 +245,27 @@ function AgendarCita({ inicial, alTerminar, alVerCitas }) {
 
         {paso === 1 && (
           <fieldset>
-            <legend className="text-secondary fs-6 mb-3">Puedes agendar para ti o para un familiar.</legend>
+            <legend className="text-secondary fs-6 mb-3">Elige a la persona que va a la cita.</legend>
             <TarjetaOpcion nombre="para-quien" valor="yo" seleccionado={paraQuien === 'yo'}
               alElegir={conLimpieza(setParaQuien)} titulo="Para mí" descripcion="Titular de la cuenta" />
-            <TarjetaOpcion nombre="para-quien" valor="familiar" seleccionado={paraQuien === 'familiar'}
-              alElegir={conLimpieza(setParaQuien)} titulo="Para un familiar" descripcion="Hijo, hija, padre, madre u otro beneficiario" />
-            {paraQuien === 'familiar' && (
+            {/* Grupo familiar (pantalla 03 del prototipo): nombre y parentesco visibles, sin escribir nada */}
+            {familiares.map((f) => (
+              <TarjetaOpcion key={f.id} nombre="para-quien" valor={`f-${f.id}`} seleccionado={paraQuien === `f-${f.id}`}
+                alElegir={conLimpieza(setParaQuien)} titulo={f.nombre} descripcion={descripcionFamiliar(f)} />
+            ))}
+            <TarjetaOpcion nombre="para-quien" valor="otra" seleccionado={paraQuien === 'otra'}
+              alElegir={conLimpieza(setParaQuien)} titulo="Otra persona" descripcion="Escribe su nombre para esta cita" />
+            {paraQuien === 'otra' && (
               <div className="mt-3">
-                <label htmlFor="nombre-familiar" className="form-label">Nombre completo del familiar</label>
+                <label htmlFor="nombre-familiar" className="form-label">Nombre completo de la persona</label>
                 <input id="nombre-familiar" className="form-control form-control-lg" value={nombre}
-                  onChange={(e) => conLimpieza(setNombre)(e.target.value)} autoComplete="off" />
+                  onChange={(e) => conLimpieza(setNombre)(e.target.value)} autoComplete="off" maxLength={80} />
               </div>
+            )}
+            {familiares.length === 0 && (
+              <p className="small text-secondary mt-2 mb-0">
+                ¿Agendas seguido para tu familia? Agrégalos en Perfil, en Grupo familiar, y aparecerán aquí.
+              </p>
             )}
           </fieldset>
         )}
