@@ -45,3 +45,49 @@
 .btn-lg {
   min-height: 48px;
 }
+
+/* Tarjetas seleccionables: área táctil grande y estado elegido visible por borde y peso, no solo por color */
+.tarjeta-opcion {
+  cursor: pointer;
+  min-height: 72px;
+  border: 2px solid #d0d7de;
+}
+.tarjeta-opcion--activa {
+  border-color: var(--mc-primario);
+  background-color: #eaf2fb;
+}
+
+/* Botón Atrás de 48 x 48 px como en el prototipo (WCAG 2.5.8) */
+.boton-atras {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Horas: botones parejos y fáciles de tocar */
+.boton-hora {
+  min-width: 112px;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--mc-primario);
+  --bs-btn-border-color: var(--mc-primario);
+  --bs-btn-hover-bg: var(--mc-primario);
+  --bs-btn-hover-border-color: var(--mc-primario);
+  --bs-btn-active-bg: #094a8b;
+  --bs-btn-active-border-color: #094a8b;
+}
+
+/* Círculo de selección de las tarjetas con el color del prototipo */
+.form-check-input:checked {
+  background-color: var(--mc-primario);
+  border-color: var(--mc-primario);
+}
+.form-check-input:focus {
+  border-color: var(--mc-primario);
+  box-shadow: 0 0 0 0.25rem rgba(11, 92, 173, 0.25);
+}
+
+/* Barra de progreso del flujo */
+.progress-bar {
+  background-color: var(--mc-primario);
+}
