@@ -15,7 +15,7 @@ const TITULOS = {
   4: 'Revisa y confirma tu cita',
 }
 
-function AgendarCita({ alTerminar }) {
+function AgendarCita({ alTerminar, alVerCitas }) {
   const [paso, setPaso] = useState(1)
 
   // Datos de la cita que se va armando
@@ -160,9 +160,14 @@ function AgendarCita({ alTerminar }) {
             </li>
           </ul>
           <p className="text-secondary">Recuerda llegar 20 minutos antes con tu documento de identidad.</p>
-          <button type="button" className="btn btn-primary btn-lg w-100" onClick={alTerminar}>
-            Volver al inicio
-          </button>
+          <div className="d-flex flex-column gap-2">
+            <button type="button" className="btn btn-primary btn-lg w-100" onClick={alVerCitas}>
+              Ver mis citas
+            </button>
+            <button type="button" className="btn btn-outline-primary btn-lg w-100" onClick={alTerminar}>
+              Volver al inicio
+            </button>
+          </div>
         </div>
       </section>
     )

@@ -7,11 +7,12 @@ import Cargando from './components/Cargando'
 import Ingreso from './pages/Ingreso'
 import Inicio from './pages/Inicio'
 import AgendarCita from './pages/AgendarCita'
+import MisCitas from './pages/MisCitas'
 
 function App() {
   const [sesion, setSesion] = useState(null)
   const [revisando, setRevisando] = useState(true)
-  const [vista, setVista] = useState('inicio') // 'inicio' o 'agendar'
+  const [vista, setVista] = useState('inicio') // 'inicio', 'agendar' o 'mis-citas'
 
   useEffect(() => {
     // 1. Al abrir la app, revisa si ya había una sesión guardada
@@ -28,15 +29,24 @@ function App() {
 
   return (
     <>
-      <Encabezado correo={sesion?.user?.email} alCerrarSesion={() => supabase.auth.signOut()} />
+      <Encabezado
+        correo={sesion?.user?.email}
+        vista={vista}
+        alNavegar={setVista}
+        alCerrarSesion={() => { setVista('inicio'); supabase.auth.signOut() }}
+      />
 
       <main className="container py-4">
         {revisando ? (
           <Cargando texto="Revisando tu sesión…" />
         ) : sesion ? (
-          vista === 'agendar'
-            ? <AgendarCita alTerminar={() => setVista('inicio')} />
-            : <Inicio alAgendar={() => setVista('agendar')} />
+          vista === 'agendar' ? (
+            <AgendarCita alTerminar={() => setVista('inicio')} alVerCitas={() => setVista('mis-citas')} />
+          ) : vista === 'mis-citas' ? (
+            <MisCitas alAgendar={() => setVista('agendar')} />
+          ) : (
+            <Inicio alAgendar={() => setVista('agendar')} />
+          )
         ) : (
           <Ingreso />
         )}
