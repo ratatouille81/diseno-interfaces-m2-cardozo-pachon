@@ -23,3 +23,25 @@
   outline: 3px solid var(--mc-primario);
   outline-offset: 2px;
 }
+
+/* Los botones de Bootstrap traen su propio azul; se reemplaza por el del prototipo (#0b5cad, contraste 6,7:1 con blanco) */
+.btn-primary {
+  --bs-btn-bg: var(--mc-primario);
+  --bs-btn-border-color: var(--mc-primario);
+  --bs-btn-hover-bg: #094a8b;
+  --bs-btn-hover-border-color: #094a8b;
+  --bs-btn-active-bg: #083d73;
+  --bs-btn-active-border-color: #083d73;
+  --bs-btn-disabled-bg: var(--mc-primario);
+  --bs-btn-disabled-border-color: var(--mc-primario);
+}
+
+.btn-link {
+  --bs-btn-color: var(--mc-primario);
+  --bs-btn-hover-color: #094a8b;
+}
+
+/* Botones de al menos 48 px de alto en pantallas táctiles (WCAG 2.5.8 y decisión del M1) */
+.btn-lg {
+  min-height: 48px;
+}

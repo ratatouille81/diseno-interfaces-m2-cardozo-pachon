@@ -1,18 +1,43 @@
-// Estructura base de Mi Cita: encabezado, contenido principal y pie, con etiquetas semánticas de HTML5
+// Mi Cita: estructura general de la aplicación.
+// Escucha la sesión de Supabase y decide qué mostrar: cargando, ingreso o inicio.
+import { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
+import Encabezado from './components/Encabezado'
+import Cargando from './components/Cargando'
+import Ingreso from './pages/Ingreso'
+
 function App() {
+  const [sesion, setSesion] = useState(null)
+  const [revisando, setRevisando] = useState(true)
+
+  useEffect(() => {
+    // 1. Al abrir la app, revisa si ya había una sesión guardada
+    supabase.auth.getSession().then(({ data }) => {
+      setSesion(data.session)
+      setRevisando(false)
+    })
+    // 2. Desde ahí, escucha cada ingreso o salida para actualizar la pantalla
+    const { data: suscripcion } = supabase.auth.onAuthStateChange((_evento, nuevaSesion) => {
+      setSesion(nuevaSesion)
+    })
+    return () => suscripcion.subscription.unsubscribe()
+  }, [])
+
   return (
     <>
-      <header className="bg-primary text-white py-3">
-        <div className="container">
-          <h1 className="h4 m-0">Mi Cita</h1>
-        </div>
-      </header>
+      <Encabezado correo={sesion?.user?.email} alCerrarSesion={() => supabase.auth.signOut()} />
 
       <main className="container py-4">
-        <section aria-labelledby="titulo-bienvenida">
-          <h2 id="titulo-bienvenida" className="h5">Agenda tu cita médica en pocos pasos</h2>
-          <p className="text-secondary">Proyecto en construcción.</p>
-        </section>
+        {revisando ? (
+          <Cargando texto="Revisando tu sesión…" />
+        ) : sesion ? (
+          <section aria-labelledby="titulo-inicio">
+            <h1 id="titulo-inicio" className="h3">Hola</h1>
+            <p className="text-secondary">Ingresaste correctamente. Aquí vas a agendar y consultar tus citas.</p>
+          </section>
+        ) : (
+          <Ingreso />
+        )}
       </main>
 
       <footer className="container py-3 small text-secondary">
