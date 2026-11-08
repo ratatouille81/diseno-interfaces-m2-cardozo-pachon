@@ -1,0 +1,25 @@
+/* Colores del prototipo de Mi Cita (módulo 1), todos con contraste AA verificado */
+:root {
+  --mc-primario: #0b5cad;
+  --mc-texto: #1b1f24;
+  --mc-texto-secundario: #4b5563;
+  --mc-fondo: #f5f7fa;
+  --mc-tarjeta: #ffffff;
+  --mc-confirmada: #1e7b34;
+  --mc-confirmada-fondo: #e6f4ea;
+  --mc-pendiente: #8a5a00;
+  --mc-pendiente-fondo: #fff4db;
+  --mc-cancelada: #b42318;
+
+  /* Se le pasan a Bootstrap para que sus componentes usen la misma paleta */
+  --bs-primary: var(--mc-primario);
+  --bs-primary-rgb: 11, 92, 173;
+  --bs-body-color: var(--mc-texto);
+  --bs-body-bg: var(--mc-fondo);
+}
+
+/* Foco siempre visible al navegar con teclado (WCAG 2.4.7) */
+:focus-visible {
+  outline: 3px solid var(--mc-primario);
+  outline-offset: 2px;
+}
