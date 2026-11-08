@@ -5,10 +5,13 @@ import { supabase } from './lib/supabase'
 import Encabezado from './components/Encabezado'
 import Cargando from './components/Cargando'
 import Ingreso from './pages/Ingreso'
+import Inicio from './pages/Inicio'
+import AgendarCita from './pages/AgendarCita'
 
 function App() {
   const [sesion, setSesion] = useState(null)
   const [revisando, setRevisando] = useState(true)
+  const [vista, setVista] = useState('inicio') // 'inicio' o 'agendar'
 
   useEffect(() => {
     // 1. Al abrir la app, revisa si ya había una sesión guardada
@@ -31,10 +34,9 @@ function App() {
         {revisando ? (
           <Cargando texto="Revisando tu sesión…" />
         ) : sesion ? (
-          <section aria-labelledby="titulo-inicio">
-            <h1 id="titulo-inicio" className="h3">Hola</h1>
-            <p className="text-secondary">Ingresaste correctamente. Aquí vas a agendar y consultar tus citas.</p>
-          </section>
+          vista === 'agendar'
+            ? <AgendarCita alTerminar={() => setVista('inicio')} />
+            : <Inicio alAgendar={() => setVista('agendar')} />
         ) : (
           <Ingreso />
         )}
