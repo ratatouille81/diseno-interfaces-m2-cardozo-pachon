@@ -159,8 +159,8 @@ Pruebas manuales sobre la demo y el entorno local, más consultas directas a la 
 | Asistente: síntomas de urgencia y llamada sin sesión | Remite a urgencias y al 123; sin sesión responde 401 | Prueba automatizada |
 | Ancho de la página en celular | Igual al de la pantalla, sin desplazamiento horizontal | Prueba automatizada |
 | Flujo completo en la demo publicada | Ingreso, festivo, agendar, cancelar y asistente funcionan | Prueba automatizada |
-| Flujo completo en Firefox | [PENDIENTE: prueba de Omar] | |
-| Flujo completo en celular real | [PENDIENTE: prueba de Omar, modelo del celular] | |
+| Flujo completo en Firefox, demo publicada | Ingreso, agendar, cancelar y asistente funcionan | Prueba manual del autor |
+| Flujo completo en el celular del autor, demo publicada | Ingreso, agendar, cancelar y asistente funcionan | Prueba manual del autor |
 
 Errores encontrados y corregidos durante las pruebas: la fila de días ensanchaba la página a 2.838 px en el celular (ancho mínimo del fieldset y texto oculto con posición absoluta); avisos de error fuera de la vista en el celular; avisos que no se borraban al corregir; colores de Bootstrap distintos a la paleta del módulo 1; la hora partida en dos líneas y con doble punto; respuestas del asistente con símbolos de Markdown; y el servidor local que conservaba en memoria una clave anterior del `.env`.
 
