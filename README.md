@@ -27,7 +27,9 @@ Es una cuenta de demostración y no contiene datos reales. También puedes crear
 - Supabase JS 2 (autenticación y base de datos)
 - API REST Nager.Date v3 (festivos)
 
-(Se completa con Gemini y Vercel al integrarlos.)
+- API de Gemini, modelo gemini-3.5-flash-lite (asistente)
+
+(Se completa con Vercel al publicar.)
 
 ## Instalación y ejecución en local
 
@@ -54,6 +56,15 @@ Fondo azul: frontend. Fondo verde: servicios cloud. Fondo amarillo: API externas
 - Autenticación: ninguna. Es una API pública y gratuita; no requiere clave.
 - Estados en la interfaz: mientras carga muestra "Consultando los festivos de Colombia…"; si la API falla, avisa y deja seguir agendando; si responde, bloquea los festivos. La respuesta se guarda en memoria para no repetir la petición.
 - Código: [`src/lib/festivos.js`](src/lib/festivos.js).
+
+## Funcionalidad inteligente: asistente para preparar la cita
+
+- Qué hace: responde dudas del paciente sobre cómo prepararse (documentos, llegada, ayuno en términos generales) y cómo usar Mi Cita. No diagnostica, no interpreta síntomas ni recomienda medicamentos; ante señales de urgencia indica ir a urgencias o llamar al 123.
+- Modelo: API de Gemini (Google), modelo `gemini-3.5-flash-lite` (configurable con la variable `GEMINI_MODEL`), nivel gratuito.
+- Seguridad de la clave: la llamada a Gemini la hace la función serverless [`api/asistente.js`](api/asistente.js), que corre en Vercel. La clave `GEMINI_API_KEY` solo existe como variable de entorno del servidor (sin prefijo `VITE_`), así que nunca llega al navegador. Se verificó que no aparece en el código compilado (`dist/`).
+- Protección del cupo: la función solo responde a usuarios con sesión activa; valida el token con Supabase y rechaza con 401 a quien no lo tenga. También limita la pregunta a 500 caracteres y la conversación a los últimos 6 mensajes.
+- Respuesta en tiempo real: la función reenvía el streaming de Gemini y la interfaz muestra el texto a medida que llega.
+- Transparencia: aviso visible de que es una inteligencia artificial, de sus límites y de que no se deben escribir datos personales ni de salud. Los errores (sin conexión, límite de consultas, servicio no disponible) se muestran con mensajes claros y la pregunta no se pierde.
 
 ## Base de datos y seguridad
 
