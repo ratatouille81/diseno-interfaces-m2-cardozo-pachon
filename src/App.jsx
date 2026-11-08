@@ -8,11 +8,12 @@ import Ingreso from './pages/Ingreso'
 import Inicio from './pages/Inicio'
 import AgendarCita from './pages/AgendarCita'
 import MisCitas from './pages/MisCitas'
+import Asistente from './pages/Asistente'
 
 function App() {
   const [sesion, setSesion] = useState(null)
   const [revisando, setRevisando] = useState(true)
-  const [vista, setVista] = useState('inicio') // 'inicio', 'agendar' o 'mis-citas'
+  const [vista, setVista] = useState('inicio') // 'inicio', 'agendar', 'mis-citas' o 'asistente'
 
   useEffect(() => {
     // 1. Al abrir la app, revisa si ya había una sesión guardada
@@ -44,8 +45,10 @@ function App() {
             <AgendarCita alTerminar={() => setVista('inicio')} alVerCitas={() => setVista('mis-citas')} />
           ) : vista === 'mis-citas' ? (
             <MisCitas alAgendar={() => setVista('agendar')} />
+          ) : vista === 'asistente' ? (
+            <Asistente />
           ) : (
-            <Inicio alAgendar={() => setVista('agendar')} />
+            <Inicio alAgendar={() => setVista('agendar')} alAsistente={() => setVista('asistente')} />
           )
         ) : (
           <Ingreso />

@@ -127,3 +127,15 @@
 .dialogo::backdrop {
   background: rgba(27, 31, 36, 0.55);
 }
+
+/* Conversación del asistente */
+.mensaje-paciente {
+  background-color: #eaf2fb;
+  border-color: #c9dcf2;
+}
+.mensaje-asistente {
+  background-color: var(--mc-tarjeta);
+}
+.mensaje-texto {
+  white-space: pre-wrap; /* respeta los saltos de línea de la respuesta */
+}

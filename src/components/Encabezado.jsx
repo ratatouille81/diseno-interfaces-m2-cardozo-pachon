@@ -3,6 +3,7 @@
 const SECCIONES = [
   { id: 'inicio', texto: 'Inicio' },
   { id: 'mis-citas', texto: 'Mis citas' },
+  { id: 'asistente', texto: 'Asistente' },
 ]
 
 function Encabezado({ correo, vista, alNavegar, alCerrarSesion }) {
